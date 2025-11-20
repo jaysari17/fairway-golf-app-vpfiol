@@ -14,6 +14,7 @@ import { StorageService } from '@/utils/storage';
 import { RatingAlgorithm } from '@/utils/ratingAlgorithm';
 import { AppStoreReviewService } from '@/utils/appStoreReview';
 import { CourseRating } from '@/types/rating';
+import { Round } from '@/types/golf';
 import * as Haptics from 'expo-haptics';
 
 type RatingStep = 'play-again' | 'comparison' | 'drag-rank' | 'confirmation';
@@ -168,6 +169,7 @@ export default function RatingFlowScreen() {
 
   const handleComplete = async () => {
     try {
+      // Save the rating
       const rating: CourseRating = {
         id: Date.now().toString(),
         courseId,
@@ -185,12 +187,34 @@ export default function RatingFlowScreen() {
       };
       
       await RatingStorageService.saveRating(rating);
+      
+      // Save a round for this course
+      const round: Round = {
+        id: Date.now().toString(),
+        courseId,
+        courseName,
+        courseLocation,
+        date: new Date(),
+        rating: Math.round(finalScore * 10), // Convert 1-10 to 1-100 for consistency
+      };
+      
+      await StorageService.saveRound(round);
       await RatingStorageService.completeTrigger(courseId);
       
       await triggerAppStoreReview();
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      router.back();
+      
+      Alert.alert(
+        'Success! 🎉',
+        `${courseName} has been added to your Fairway list with a rating of ${finalScore.toFixed(1)}/10`,
+        [
+          {
+            text: 'OK',
+            onPress: () => router.back(),
+          },
+        ]
+      );
     } catch (error) {
       console.error('Error saving rating:', error);
       Alert.alert('Error', 'Failed to save rating');

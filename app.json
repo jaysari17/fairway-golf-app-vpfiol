@@ -35,7 +35,6 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.fairway.golftracker",
-      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.fairway.golftracker",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
@@ -79,9 +78,8 @@
         "projectId": "your-project-id-here"
       }
     },
-    "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile.",
+    "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses.",
     "primaryColor": "#57C8A1",
-    "privacy": "public",
-    "githubUrl": "https://github.com/yourusername/fairway"
+    "privacy": "public"
   }
 }

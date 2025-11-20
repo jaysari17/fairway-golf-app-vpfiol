@@ -4,7 +4,6 @@ import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   Alert,
@@ -13,35 +12,23 @@ import {
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { IconSymbol } from '@/components/IconSymbol';
-import { StorageService } from '@/utils/storage';
-import { RatingStorageService } from '@/utils/ratingStorage';
-import { Round } from '@/types/golf';
 import { colors } from '@/styles/commonStyles';
 import { sampleCourses } from '@/data/sampleCourses';
 import * as Haptics from 'expo-haptics';
 
-export default function LogRoundModal() {
+export default function SelectCourseModal() {
   const theme = useTheme();
   const router = useRouter();
-
   const [selectedCourse, setSelectedCourse] = useState<string>('');
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [rating, setRating] = useState(50);
-  const [review, setReview] = useState('');
-  const [score, setScore] = useState('');
-  const [saving, setSaving] = useState(false);
 
-  const handleSave = async () => {
+  const handleContinue = async () => {
     if (!selectedCourse) {
       Alert.alert('Error', 'Please select a course');
       return;
     }
 
     try {
-      setSaving(true);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       const course = sampleCourses.find(c => c.id === selectedCourse);
@@ -50,74 +37,21 @@ export default function LogRoundModal() {
         return;
       }
 
-      const round: Round = {
-        id: Date.now().toString(),
-        courseId: course.id,
-        courseName: course.name,
-        courseLocation: course.location,
-        date,
-        rating,
-        review: review.trim() || undefined,
-        score: score ? parseInt(score, 10) : undefined,
-      };
-
-      await StorageService.saveRound(round);
-
-      // Check if course needs rating
-      const existingRating = await RatingStorageService.getRatingForCourse(course.id);
-      
-      if (!existingRating) {
-        // Add rating trigger
-        await RatingStorageService.addTrigger({
-          courseId: course.id,
-          courseName: course.name,
-          roundId: round.id,
-          triggerType: 'after_log',
-          triggeredAt: new Date(),
-          completed: false,
-        });
-      }
-
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      Alert.alert(
-        'Success',
-        'Round logged successfully!',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              router.back();
-              
-              // Navigate to rating flow if no rating exists
-              if (!existingRating) {
-                setTimeout(() => {
-                  router.push({
-                    pathname: '/rating-flow',
-                    params: {
-                      courseId: course.id,
-                      courseName: course.name,
-                      courseLocation: course.location,
-                    },
-                  });
-                }, 500);
-              }
-            },
+      // Navigate directly to rating flow
+      router.back();
+      setTimeout(() => {
+        router.push({
+          pathname: '/rating-flow',
+          params: {
+            courseId: course.id,
+            courseName: course.name,
+            courseLocation: course.location,
           },
-        ]
-      );
+        });
+      }, 300);
     } catch (error) {
-      console.error('Error saving round:', error);
-      Alert.alert('Error', 'Failed to save round. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDateChange = (event: any, selectedDate?: Date) => {
-    setShowDatePicker(Platform.OS === 'ios');
-    if (selectedDate) {
-      setDate(selectedDate);
+      console.error('Error selecting course:', error);
+      Alert.alert('Error', 'Failed to select course. Please try again.');
     }
   };
 
@@ -133,201 +67,85 @@ export default function LogRoundModal() {
       >
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Log a Round
+            Select a Course
           </Text>
           <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-            Track your golf journey
+            Choose the course you want to rate
           </Text>
         </View>
 
-        <View style={styles.form}>
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Course *
-            </Text>
-            <View style={[styles.pickerContainer, { backgroundColor: theme.colors.card }]}>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.courseList}
-              >
-                {sampleCourses.map((course) => (
-                  <TouchableOpacity
-                    key={course.id}
-                    style={[
-                      styles.courseChip,
-                      selectedCourse === course.id && { backgroundColor: colors.primary },
-                      { borderColor: theme.colors.border },
-                    ]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      setSelectedCourse(course.id);
-                    }}
-                    activeOpacity={0.7}
-                  >
-                    <Text
-                      style={[
-                        styles.courseChipText,
-                        { color: selectedCourse === course.id ? '#FFFFFF' : theme.colors.text },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {course.name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.courseChipLocation,
-                        { color: selectedCourse === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {course.city}, {course.state}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Date Played *
-            </Text>
+        <View style={styles.courseGrid}>
+          {sampleCourses.map((course) => (
             <TouchableOpacity
-              style={[styles.dateButton, { backgroundColor: theme.colors.card }]}
+              key={course.id}
+              style={[
+                styles.courseCard,
+                selectedCourse === course.id && { 
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                },
+                { 
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                },
+              ]}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowDatePicker(true);
+                setSelectedCourse(course.id);
               }}
               activeOpacity={0.7}
             >
-              <IconSymbol
-                ios_icon_name="calendar"
-                android_material_icon_name="calendar-today"
-                size={20}
-                color={colors.primary}
-              />
-              <Text style={[styles.dateText, { color: theme.colors.text }]}>
-                {date.toLocaleDateString('en-US', {
-                  weekday: 'short',
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </Text>
-            </TouchableOpacity>
-            {showDatePicker && (
-              <DateTimePicker
-                value={date}
-                mode="date"
-                display="default"
-                onChange={handleDateChange}
-                maximumDate={new Date()}
-              />
-            )}
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Quick Rating: {rating}/100
-            </Text>
-            <View style={styles.ratingContainer}>
-              <TouchableOpacity
-                style={[styles.ratingButton, { backgroundColor: theme.colors.card }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setRating(Math.max(0, rating - 10));
-                }}
-              >
-                <IconSymbol
-                  ios_icon_name="minus"
-                  android_material_icon_name="remove"
-                  size={20}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-              <View style={[styles.ratingDisplay, { backgroundColor: colors.primary }]}>
-                <Text style={styles.ratingValue}>{rating}</Text>
+              <View style={styles.courseCardContent}>
+                <Text
+                  style={[
+                    styles.courseName,
+                    { color: selectedCourse === course.id ? '#FFFFFF' : theme.colors.text },
+                  ]}
+                  numberOfLines={2}
+                >
+                  {course.name}
+                </Text>
+                <Text
+                  style={[
+                    styles.courseLocation,
+                    { color: selectedCourse === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {course.city}, {course.state}
+                </Text>
+                {selectedCourse === course.id && (
+                  <View style={styles.checkmark}>
+                    <IconSymbol
+                      ios_icon_name="checkmark.circle.fill"
+                      android_material_icon_name="check-circle"
+                      size={24}
+                      color="#FFFFFF"
+                    />
+                  </View>
+                )}
               </View>
-              <TouchableOpacity
-                style={[styles.ratingButton, { backgroundColor: theme.colors.card }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  setRating(Math.min(100, rating + 10));
-                }}
-              >
-                <IconSymbol
-                  ios_icon_name="plus"
-                  android_material_icon_name="add"
-                  size={20}
-                  color={colors.primary}
-                />
-              </TouchableOpacity>
-            </View>
-            <Text style={[styles.helperText, { color: theme.dark ? '#98989D' : '#666' }]}>
-              You&apos;ll rate this course in detail next
-            </Text>
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Score (Optional)
-            </Text>
-            <TextInput
-              style={[
-                styles.input,
-                { 
-                  backgroundColor: theme.colors.card,
-                  color: theme.colors.text,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              placeholder="e.g., 85"
-              placeholderTextColor={theme.dark ? '#98989D' : '#999'}
-              value={score}
-              onChangeText={setScore}
-              keyboardType="number-pad"
-              maxLength={3}
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: theme.colors.text }]}>
-              Quick Notes (Optional)
-            </Text>
-            <TextInput
-              style={[
-                styles.textArea,
-                { 
-                  backgroundColor: theme.colors.card,
-                  color: theme.colors.text,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              placeholder="How was your round? Any memorable moments?"
-              placeholderTextColor={theme.dark ? '#98989D' : '#999'}
-              value={review}
-              onChangeText={setReview}
-              multiline
-              numberOfLines={4}
-              textAlignVertical="top"
-            />
-          </View>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: colors.primary }]}
-            onPress={handleSave}
-            disabled={saving || !selectedCourse}
+            style={[
+              styles.continueButton, 
+              { backgroundColor: colors.primary },
+              !selectedCourse && styles.continueButtonDisabled,
+            ]}
+            onPress={handleContinue}
+            disabled={!selectedCourse}
             activeOpacity={0.8}
           >
-            <Text style={styles.saveButtonText}>
-              {saving ? 'Saving...' : 'Log Round'}
+            <Text style={styles.continueButtonText}>
+              Continue to Rating
             </Text>
             <IconSymbol
-              ios_icon_name="checkmark"
-              android_material_icon_name="check"
+              ios_icon_name="arrow.right"
+              android_material_icon_name="arrow-forward"
               size={20}
               color="#FFFFFF"
             />
@@ -351,7 +169,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 32,
   },
   title: {
     fontSize: 32,
@@ -361,106 +179,51 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
   },
-  form: {
-    gap: 20,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  pickerContainer: {
-    borderRadius: 12,
-    padding: 12,
-  },
-  courseList: {
+  courseGrid: {
     gap: 12,
-    paddingVertical: 4,
   },
-  courseChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+  courseCard: {
+    borderRadius: 16,
     borderWidth: 2,
-    minWidth: 160,
-    maxWidth: 200,
-  },
-  courseChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  courseChipLocation: {
-    fontSize: 12,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 16,
-    borderRadius: 12,
-  },
-  dateText: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  ratingButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ratingDisplay: {
-    flex: 1,
-    height: 56,
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  ratingValue: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  helperText: {
-    fontSize: 14,
-    fontStyle: 'italic',
-  },
-  input: {
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
-  },
-  textArea: {
-    padding: 16,
-    borderRadius: 12,
-    fontSize: 16,
-    borderWidth: 1,
+    padding: 20,
     minHeight: 100,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
+  },
+  courseCardContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  courseName: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 6,
+  },
+  courseLocation: {
+    fontSize: 14,
+  },
+  checkmark: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
   },
   footer: {
     marginTop: 32,
   },
-  saveButton: {
+  continueButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 18,
+    borderRadius: 16,
     boxShadow: '0px 4px 16px rgba(87, 200, 161, 0.4)',
     elevation: 4,
   },
-  saveButtonText: {
+  continueButtonDisabled: {
+    opacity: 0.5,
+  },
+  continueButtonText: {
     color: '#FFFFFF',
     fontSize: 18,
     fontWeight: '700',

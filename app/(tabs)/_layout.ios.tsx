@@ -11,7 +11,7 @@ export default function TabLayout() {
       </NativeTabs.Trigger>
       <NativeTabs.Trigger key="log" name="modal" href="/modal">
         <Icon sf="plus.circle.fill" />
-        <Label>Rank</Label>
+        <Label>Rate</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger key="profile" name="profile">
         <Icon sf="person.fill" />

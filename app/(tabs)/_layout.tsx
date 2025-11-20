@@ -15,7 +15,7 @@ export default function TabLayout() {
       name: 'log',
       route: '/modal',
       icon: 'add-circle',
-      label: 'Rank',
+      label: 'Rate',
     },
     {
       name: 'profile',
