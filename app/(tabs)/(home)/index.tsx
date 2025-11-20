@@ -30,7 +30,7 @@ export default function HomeScreen() {
   useEffect(() => {
     // Check for session-based triggers on mount
     checkSessionTriggers();
-  }, []);
+  }, [checkSessionTriggers]);
 
   useEffect(() => {
     // Show rating flow if there are pending triggers
@@ -47,7 +47,7 @@ export default function HomeScreen() {
         });
       }, 1000);
     }
-  }, [pendingTriggers, loading]);
+  }, [pendingTriggers, loading, rounds, router]);
 
   const onRefresh = async () => {
     setRefreshing(true);

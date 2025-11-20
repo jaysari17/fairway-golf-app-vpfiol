@@ -6,6 +6,7 @@ const STORAGE_KEYS = {
   RATINGS: '@fairway_ratings',
   RATING_TRIGGERS: '@fairway_rating_triggers',
   LAST_SESSION: '@fairway_last_session',
+  APP_REVIEW_REQUESTED: '@fairway_app_review_requested',
 };
 
 export const RatingStorageService = {
@@ -111,6 +112,26 @@ export const RatingStorageService = {
       await AsyncStorage.setItem(STORAGE_KEYS.LAST_SESSION, new Date().toISOString());
     } catch (error) {
       console.error('Error updating last session:', error);
+      throw error;
+    }
+  },
+
+  // App Review Tracking (legacy methods for backward compatibility)
+  async hasRequestedAppReview(): Promise<boolean> {
+    try {
+      const requested = await AsyncStorage.getItem(STORAGE_KEYS.APP_REVIEW_REQUESTED);
+      return requested === 'true';
+    } catch (error) {
+      console.error('Error checking if review requested:', error);
+      return false;
+    }
+  },
+
+  async markAppReviewRequested(): Promise<void> {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.APP_REVIEW_REQUESTED, 'true');
+    } catch (error) {
+      console.error('Error marking app review requested:', error);
       throw error;
     }
   },

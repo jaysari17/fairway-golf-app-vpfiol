@@ -4,6 +4,7 @@ import { View, StyleSheet, Modal, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as StoreReview from 'expo-store-review';
 import { PlayAgainStep } from '@/components/rating/PlayAgainStep';
 import { ComparisonStep } from '@/components/rating/ComparisonStep';
 import { DragRankStep } from '@/components/rating/DragRankStep';
@@ -13,6 +14,7 @@ import { RatingStorageService } from '@/utils/ratingStorage';
 import { StorageService } from '@/utils/storage';
 import { RatingAlgorithm } from '@/utils/ratingAlgorithm';
 import { CourseRating } from '@/types/rating';
+import * as Haptics from 'expo-haptics';
 
 type RatingStep = 'play-again' | 'comparison' | 'drag-rank' | 'confirmation';
 
@@ -191,6 +193,10 @@ export default function RatingFlowScreen() {
       await RatingStorageService.saveRating(rating);
       await RatingStorageService.completeTrigger(courseId);
       
+      // Trigger app store review after completing rating flow
+      await triggerAppStoreReview();
+      
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       router.back();
     } catch (error) {
       console.error('Error saving rating:', error);
@@ -198,13 +204,49 @@ export default function RatingFlowScreen() {
     }
   };
 
+  const triggerAppStoreReview = async () => {
+    try {
+      // Check if we should show the review prompt
+      const ratings = await RatingStorageService.getRatings();
+      const rounds = await StorageService.getRounds();
+      
+      // Only show after user has rated 3+ courses and logged 5+ rounds
+      if (ratings.length >= 3 && rounds.length >= 5) {
+        const hasReviewBeenRequested = await RatingStorageService.hasRequestedAppReview();
+        
+        if (!hasReviewBeenRequested) {
+          const isAvailable = await StoreReview.isAvailableAsync();
+          
+          if (isAvailable) {
+            // Wait a bit before showing the review prompt
+            setTimeout(async () => {
+              await StoreReview.requestReview();
+              await RatingStorageService.markAppReviewRequested();
+            }, 2000);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error triggering app store review:', error);
+      // Don't show error to user, just log it
+    }
+  };
+
   const handleClose = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     Alert.alert(
       'Exit Rating?',
       'Your progress will be lost. Are you sure?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Exit', style: 'destructive', onPress: () => router.back() },
+        { 
+          text: 'Exit', 
+          style: 'destructive', 
+          onPress: () => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+            router.back();
+          }
+        },
       ]
     );
   };
@@ -232,6 +274,8 @@ export default function RatingFlowScreen() {
             }}
             comparisonCourse={currentComparisonCourse}
             onSelect={handleComparisonSelect}
+            currentIndex={currentComparisonIndex}
+            totalComparisons={comparisonCourses.length}
           />
         );
       
@@ -271,7 +315,7 @@ export default function RatingFlowScreen() {
       >
         <View style={styles.header}>
           <TouchableOpacity
-            style={styles.closeButton}
+            style={[styles.closeButton, { backgroundColor: theme.colors.card }]}
             onPress={handleClose}
             activeOpacity={0.7}
           >
@@ -308,6 +352,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+    elevation: 2,
   },
   content: {
     flex: 1,

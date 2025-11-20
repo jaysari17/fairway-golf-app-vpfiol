@@ -19,7 +19,8 @@
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "FAIRWAY needs access to your photo library to let you add course photos to your rounds.",
-        "NSCameraUsageDescription": "FAIRWAY needs access to your camera to let you take photos of courses you play."
+        "NSCameraUsageDescription": "FAIRWAY needs access to your camera to let you take photos of courses you play.",
+        "NSPhotoLibraryAddUsageDescription": "FAIRWAY needs permission to save photos to your library."
       },
       "buildNumber": "1"
     },
@@ -30,6 +31,7 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.fairway.golftracker",
+      "playStoreUrl": "https://play.google.com/store/apps/details?id=com.fairway.golftracker",
       "versionCode": 1,
       "permissions": [
         "CAMERA",
@@ -59,7 +61,12 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "your-project-id-here"
+      }
+    },
+    "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile.",
+    "primaryColor": "#57C8A1"
   }
 }

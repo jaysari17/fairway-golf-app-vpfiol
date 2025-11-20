@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import * as Haptics from 'expo-haptics';
+import { AppStoreReviewService } from '@/utils/appStoreReview';
 
 interface ConfirmationStepProps {
   courseName: string;
@@ -25,8 +26,20 @@ export function ConfirmationStep({
 }: ConfirmationStepProps) {
   const theme = useTheme();
 
-  const handleComplete = () => {
+  useEffect(() => {
+    // Trigger haptic feedback on mount
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  }, []);
+
+  const handleComplete = async () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    
+    // Request app store review after completing a rating
+    // This follows Apple/Google guidelines: after a meaningful interaction
+    setTimeout(async () => {
+      await AppStoreReviewService.requestReview();
+    }, 1000);
+    
     onComplete();
   };
 
@@ -43,6 +56,15 @@ export function ConfirmationStep({
     if (score >= 6) return '👌';
     if (score >= 5) return '😐';
     return '👎';
+  };
+
+  const getScoreLabel = (score: number) => {
+    if (score >= 9) return 'Outstanding!';
+    if (score >= 8) return 'Excellent!';
+    if (score >= 7) return 'Great!';
+    if (score >= 6) return 'Good';
+    if (score >= 5) return 'Average';
+    return 'Below Average';
   };
 
   return (
@@ -69,6 +91,9 @@ export function ConfirmationStep({
           <Text style={styles.scoreValue}>{finalScore.toFixed(1)}</Text>
           <Text style={styles.scoreMax}>/10</Text>
         </View>
+        <Text style={[styles.scoreLabel, { color: getScoreColor(finalScore) }]}>
+          {getScoreLabel(finalScore)}
+        </Text>
       </View>
 
       <View style={styles.statsContainer}>
@@ -106,7 +131,7 @@ export function ConfirmationStep({
         </View>
       </View>
 
-      <View style={styles.infoBox}>
+      <View style={[styles.infoBox, { backgroundColor: colors.primary + '15' }]}>
         <IconSymbol
           ios_icon_name="info.circle"
           android_material_icon_name="info"
@@ -114,7 +139,7 @@ export function ConfirmationStep({
           color={colors.primary}
         />
         <Text style={[styles.infoText, { color: theme.dark ? '#98989D' : '#666' }]}>
-          Your rating helps us recommend courses you&apos;ll love
+          Your rating helps us recommend courses you&apos;ll love and improves your golf profile
         </Text>
       </View>
 
@@ -139,7 +164,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 40,
     alignItems: 'center',
   },
   successIcon: {
@@ -170,6 +195,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 20,
+    marginBottom: 12,
   },
   scoreValue: {
     fontSize: 48,
@@ -182,6 +208,10 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.8,
     marginLeft: 4,
+  },
+  scoreLabel: {
+    fontSize: 20,
+    fontWeight: '700',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -219,8 +249,8 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 16,
     borderRadius: 12,
-    backgroundColor: colors.primary + '15',
     marginBottom: 32,
+    width: '100%',
   },
   infoText: {
     flex: 1,

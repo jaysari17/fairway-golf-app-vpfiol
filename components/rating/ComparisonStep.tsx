@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { colors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
@@ -18,12 +18,16 @@ interface ComparisonStepProps {
   targetCourse: ComparisonCourse;
   comparisonCourse: ComparisonCourse;
   onSelect: (selectedCourseId: string) => void;
+  currentIndex: number;
+  totalComparisons: number;
 }
 
 export function ComparisonStep({ 
   targetCourse, 
   comparisonCourse, 
-  onSelect 
+  onSelect,
+  currentIndex,
+  totalComparisons,
 }: ComparisonStepProps) {
   const theme = useTheme();
 
@@ -88,6 +92,23 @@ export function ComparisonStep({
 
   return (
     <View style={styles.container}>
+      <View style={styles.progressContainer}>
+        <Text style={[styles.progressText, { color: theme.dark ? '#98989D' : '#666' }]}>
+          Comparison {currentIndex + 1} of {totalComparisons}
+        </Text>
+        <View style={styles.progressBar}>
+          <View 
+            style={[
+              styles.progressFill, 
+              { 
+                backgroundColor: colors.primary,
+                width: `${((currentIndex + 1) / totalComparisons) * 100}%`
+              }
+            ]} 
+          />
+        </View>
+      </View>
+
       <Text style={[styles.question, { color: theme.colors.text }]}>
         Which course do you like more?
       </Text>
@@ -96,7 +117,9 @@ export function ComparisonStep({
         {renderCourseCard(targetCourse, true)}
         
         <View style={styles.vsContainer}>
-          <Text style={[styles.vsText, { color: colors.primary }]}>VS</Text>
+          <View style={[styles.vsBadge, { backgroundColor: theme.colors.card }]}>
+            <Text style={[styles.vsText, { color: colors.primary }]}>VS</Text>
+          </View>
         </View>
         
         {renderCourseCard(comparisonCourse, false)}
@@ -109,7 +132,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 20,
+  },
+  progressContainer: {
+    marginBottom: 24,
+  },
+  progressText: {
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  progressBar: {
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 2,
   },
   question: {
     fontSize: 24,
@@ -182,15 +224,18 @@ const styles = StyleSheet.create({
     marginVertical: -10,
     zIndex: 10,
   },
+  vsBadge: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
+    elevation: 4,
+  },
   vsText: {
-    fontSize: 24,
+    fontSize: 20,
     fontWeight: '800',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    overflow: 'hidden',
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
-    elevation: 2,
+    letterSpacing: 1,
   },
 });
