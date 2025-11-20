@@ -2,14 +2,23 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  background: '#F8F8FF',           // Off-white
-  text: '#333333',                 // Charcoal gray
-  textSecondary: '#666666',        // Medium gray
-  primary: '#57C8A1',              // Deep mint green
-  secondary: '#45A088',            // Slightly darker shade of mint green
-  accent: '#228B22',               // Dark forest green
-  card: '#FFFFFF',                 // White
-  highlight: '#70E0C1',            // Lighter tint of mint green
+  // Light mode colors
+  background: '#F8F8FF',
+  text: '#333333',
+  textSecondary: '#666666',
+  primary: '#57C8A1',
+  secondary: '#45A088',
+  accent: '#228B22',
+  card: '#FFFFFF',
+  highlight: '#70E0C1',
+  border: '#E0E0E0',
+  
+  // Dark mode colors (used dynamically via theme)
+  darkBackground: '#1C1C1E',
+  darkText: '#FFFFFF',
+  darkTextSecondary: '#98989D',
+  darkCard: '#2C2C2E',
+  darkBorder: '#38383A',
 };
 
 export const buttonStyles = StyleSheet.create({
@@ -120,12 +129,12 @@ export const commonStyles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     marginBottom: 12,
   },
   divider: {
     height: 1,
-    backgroundColor: '#E0E0E0',
+    backgroundColor: colors.border,
     marginVertical: 16,
   },
 });
