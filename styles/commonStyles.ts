@@ -1,26 +1,47 @@
-import { StyleSheet, ViewStyle, TextStyle } from 'react-native';
+
+import { StyleSheet } from 'react-native';
 
 export const colors = {
-  primary: '#162456',    // Material Blue
-  secondary: '#193cb8',  // Darker Blue
-  accent: '#64B5F6',     // Light Blue
-  background: '#101824',  // Keeping dark background
-  backgroundAlt: '#162133',  // Keeping dark background
-  text: '#e3e3e3',       // Keeping light text
-  grey: '#90CAF9',       // Light Blue Grey
-  card: '#193cb8',       // Keeping dark card background
+  background: '#F8F8FF',           // Off-white
+  text: '#333333',                 // Charcoal gray
+  textSecondary: '#666666',        // Medium gray
+  primary: '#57C8A1',              // Deep mint green
+  secondary: '#45A088',            // Slightly darker shade of mint green
+  accent: '#228B22',               // Dark forest green
+  card: '#FFFFFF',                 // White
+  highlight: '#70E0C1',            // Lighter tint of mint green
 };
 
 export const buttonStyles = StyleSheet.create({
-  instructionsButton: {
+  primaryButton: {
     backgroundColor: colors.primary,
-    alignSelf: 'center',
-    width: '100%',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
+    elevation: 3,
   },
-  backButton: {
-    backgroundColor: colors.backgroundAlt,
-    alignSelf: 'center',
-    width: '100%',
+  primaryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    backgroundColor: colors.card,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  secondaryButtonText: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
@@ -35,8 +56,6 @@ export const commonStyles = StyleSheet.create({
     backgroundColor: colors.background,
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   content: {
     flex: 1,
@@ -46,44 +65,67 @@ export const commonStyles = StyleSheet.create({
     width: '100%',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '800',
     textAlign: 'center',
     color: colors.text,
-    marginBottom: 10
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
   },
   text: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '400',
     color: colors.text,
     marginBottom: 8,
     lineHeight: 24,
-    textAlign: 'center',
+  },
+  textSecondary: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: colors.textSecondary,
+    lineHeight: 20,
   },
   section: {
     width: '100%',
-    alignItems: 'center',
     paddingHorizontal: 20,
-  },
-  buttonContainer: {
-    width: '100%',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   card: {
-    backgroundColor: colors.backgroundAlt,
-    borderColor: colors.grey,
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 16,
     marginVertical: 8,
     width: '100%',
-    boxShadow: '0px 2px 3px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.08)',
     elevation: 2,
   },
-  icon: {
-    width: 60,
-    height: 60,
-    tintColor: "white",
+  cardLarge: {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    padding: 20,
+    marginVertical: 12,
+    width: '100%',
+    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.1)',
+    elevation: 3,
+  },
+  input: {
+    backgroundColor: colors.card,
+    borderRadius: 12,
+    padding: 14,
+    fontSize: 16,
+    color: colors.text,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    marginBottom: 12,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#E0E0E0',
+    marginVertical: 16,
   },
 });
