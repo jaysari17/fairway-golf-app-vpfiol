@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,13 +17,37 @@ import { StatCard } from '@/components/StatCard';
 import { IconSymbol } from '@/components/IconSymbol';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { useRounds } from '@/hooks/useRounds';
+import { useRatingTrigger } from '@/hooks/useRatingTrigger';
 import { colors } from '@/styles/commonStyles';
 
 export default function HomeScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { rounds, loading, refresh } = useRounds();
+  const { pendingTriggers, checkSessionTriggers } = useRatingTrigger();
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Check for session-based triggers on mount
+    checkSessionTriggers();
+  }, []);
+
+  useEffect(() => {
+    // Show rating flow if there are pending triggers
+    if (pendingTriggers.length > 0 && !loading) {
+      const trigger = pendingTriggers[0];
+      setTimeout(() => {
+        router.push({
+          pathname: '/rating-flow',
+          params: {
+            courseId: trigger.courseId,
+            courseName: trigger.courseName,
+            courseLocation: rounds.find(r => r.courseId === trigger.courseId)?.courseLocation || '',
+          },
+        });
+      }, 1000);
+    }
+  }, [pendingTriggers, loading]);
 
   const onRefresh = async () => {
     setRefreshing(true);

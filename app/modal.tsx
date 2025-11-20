@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { IconSymbol } from '@/components/IconSymbol';
 import { useRounds } from '@/hooks/useRounds';
+import { useRatingTrigger } from '@/hooks/useRatingTrigger';
 import { Round, GolfCourse } from '@/types/golf';
 import { sampleCourses } from '@/data/sampleCourses';
 import { colors } from '@/styles/commonStyles';
@@ -24,6 +25,7 @@ export default function LogRoundModal() {
   const theme = useTheme();
   const router = useRouter();
   const { addRound } = useRounds();
+  const { triggerRatingAfterLog } = useRatingTrigger();
 
   const [selectedCourse, setSelectedCourse] = useState<GolfCourse | null>(null);
   const [date, setDate] = useState(new Date());
@@ -55,8 +57,28 @@ export default function LogRoundModal() {
       };
 
       await addRound(newRound);
+      
+      // Trigger rating flow
+      await triggerRatingAfterLog(
+        selectedCourse.id,
+        selectedCourse.name,
+        newRound.id
+      );
+      
       Alert.alert('Success', 'Round logged successfully!');
       router.back();
+      
+      // Navigate to rating flow
+      setTimeout(() => {
+        router.push({
+          pathname: '/rating-flow',
+          params: {
+            courseId: selectedCourse.id,
+            courseName: selectedCourse.name,
+            courseLocation: selectedCourse.location,
+          },
+        });
+      }, 500);
     } catch (error) {
       console.error('Error saving round:', error);
       Alert.alert('Error', 'Failed to save round. Please try again.');
