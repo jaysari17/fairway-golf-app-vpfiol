@@ -20,9 +20,13 @@
         "ITSAppUsesNonExemptEncryption": false,
         "NSPhotoLibraryUsageDescription": "FAIRWAY needs access to your photo library to let you add course photos to your rounds.",
         "NSCameraUsageDescription": "FAIRWAY needs access to your camera to let you take photos of courses you play.",
-        "NSPhotoLibraryAddUsageDescription": "FAIRWAY needs permission to save photos to your library."
+        "NSPhotoLibraryAddUsageDescription": "FAIRWAY needs permission to save photos to your library.",
+        "NSLocationWhenInUseUsageDescription": "FAIRWAY uses your location to help you discover nearby golf courses."
       },
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -36,7 +40,9 @@
       "permissions": [
         "CAMERA",
         "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -54,6 +60,13 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 200
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FAIRWAY needs access to your photos to let you add course images to your rounds.",
+          "cameraPermission": "FAIRWAY needs access to your camera to let you take photos of courses."
+        }
       ]
     ],
     "scheme": "fairway",
@@ -67,6 +80,8 @@
       }
     },
     "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile.",
-    "primaryColor": "#57C8A1"
+    "primaryColor": "#57C8A1",
+    "privacy": "public",
+    "githubUrl": "https://github.com/yourusername/fairway"
   }
 }

@@ -4,7 +4,6 @@ import { View, StyleSheet, Modal, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import * as StoreReview from 'expo-store-review';
 import { PlayAgainStep } from '@/components/rating/PlayAgainStep';
 import { ComparisonStep } from '@/components/rating/ComparisonStep';
 import { DragRankStep } from '@/components/rating/DragRankStep';
@@ -13,6 +12,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { RatingStorageService } from '@/utils/ratingStorage';
 import { StorageService } from '@/utils/storage';
 import { RatingAlgorithm } from '@/utils/ratingAlgorithm';
+import { AppStoreReviewService } from '@/utils/appStoreReview';
 import { CourseRating } from '@/types/rating';
 import * as Haptics from 'expo-haptics';
 
@@ -60,19 +60,14 @@ export default function RatingFlowScreen() {
 
   const loadData = async () => {
     try {
-      // Get all existing ratings
       const ratings = await RatingStorageService.getRatings();
-      
-      // Get rounds to calculate play count
       const rounds = await StorageService.getRounds();
       const courseRounds = rounds.filter(r => r.courseId === courseId);
       setPlayCount(courseRounds.length);
       
-      // Select comparison courses
       const comparisons = RatingAlgorithm.selectComparisonCourses(ratings, courseId, 3);
       setComparisonCourses(comparisons);
       
-      // Prepare ranked courses for drag-rank step
       const ranked = ratings
         .sort((a, b) => b.finalScore - a.finalScore)
         .map(r => ({
@@ -149,7 +144,6 @@ export default function RatingFlowScreen() {
   const handleRankPlacement = async (position: number) => {
     setRankPosition(position);
     
-    // Calculate final score
     const neighborRatings: { above?: number; below?: number } = {};
     
     if (position > 0 && rankedCourses[position - 1]) {
@@ -193,7 +187,6 @@ export default function RatingFlowScreen() {
       await RatingStorageService.saveRating(rating);
       await RatingStorageService.completeTrigger(courseId);
       
-      // Trigger app store review after completing rating flow
       await triggerAppStoreReview();
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -206,29 +199,14 @@ export default function RatingFlowScreen() {
 
   const triggerAppStoreReview = async () => {
     try {
-      // Check if we should show the review prompt
       const ratings = await RatingStorageService.getRatings();
       const rounds = await StorageService.getRounds();
       
-      // Only show after user has rated 3+ courses and logged 5+ rounds
       if (ratings.length >= 3 && rounds.length >= 5) {
-        const hasReviewBeenRequested = await RatingStorageService.hasRequestedAppReview();
-        
-        if (!hasReviewBeenRequested) {
-          const isAvailable = await StoreReview.isAvailableAsync();
-          
-          if (isAvailable) {
-            // Wait a bit before showing the review prompt
-            setTimeout(async () => {
-              await StoreReview.requestReview();
-              await RatingStorageService.markAppReviewRequested();
-            }, 2000);
-          }
-        }
+        await AppStoreReviewService.requestReview();
       }
     } catch (error) {
       console.error('Error triggering app store review:', error);
-      // Don't show error to user, just log it
     }
   };
 

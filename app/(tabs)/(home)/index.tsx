@@ -1,152 +1,152 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  RefreshControl,
+  TextInput,
   Platform,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
 import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { CourseCard } from '@/components/CourseCard';
-import { StatCard } from '@/components/StatCard';
 import { IconSymbol } from '@/components/IconSymbol';
-import { LoadingSpinner } from '@/components/LoadingSpinner';
+import { CourseCard } from '@/components/CourseCard';
 import { useRounds } from '@/hooks/useRounds';
-import { useRatingTrigger } from '@/hooks/useRatingTrigger';
 import { colors } from '@/styles/commonStyles';
+import { sampleCourses } from '@/data/sampleCourses';
+import { GolfCourse } from '@/types/golf';
 
-export default function HomeScreen() {
+export default function DiscoverScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { rounds, loading, refresh } = useRounds();
-  const { pendingTriggers, checkSessionTriggers } = useRatingTrigger();
-  const [refreshing, setRefreshing] = useState(false);
+  const { rounds } = useRounds();
+  const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    // Check for session-based triggers on mount
-    checkSessionTriggers();
-  }, [checkSessionTriggers]);
-
-  useEffect(() => {
-    // Show rating flow if there are pending triggers
-    if (pendingTriggers.length > 0 && !loading) {
-      const trigger = pendingTriggers[0];
-      setTimeout(() => {
-        router.push({
-          pathname: '/rating-flow',
-          params: {
-            courseId: trigger.courseId,
-            courseName: trigger.courseName,
-            courseLocation: rounds.find(r => r.courseId === trigger.courseId)?.courseLocation || '',
-          },
-        });
-      }, 1000);
-    }
-  }, [pendingTriggers, loading, rounds, router]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await refresh();
-    setRefreshing(false);
-  };
-
-  const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
-  const averageRating = rounds.length > 0
-    ? Math.round(rounds.reduce((sum, r) => sum + r.rating, 0) / rounds.length)
-    : 0;
-
-  const sortedRounds = [...rounds].sort((a, b) => 
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-
-  if (loading && rounds.length === 0) {
+  const playedCourseIds = new Set(rounds.map(r => r.courseId));
+  
+  const filteredCourses = sampleCourses.filter(course => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
     return (
-      <SafeAreaView 
-        style={[styles.safeArea, { backgroundColor: theme.colors.background }]} 
-        edges={['top']}
-      >
-        <View style={styles.loadingContainer}>
-          <LoadingSpinner message="Loading your rounds..." />
-        </View>
-      </SafeAreaView>
+      course.name.toLowerCase().includes(query) ||
+      course.city.toLowerCase().includes(query) ||
+      course.state.toLowerCase().includes(query)
     );
-  }
+  });
+
+  const recommendedCourses = filteredCourses.filter(c => !playedCourseIds.has(c.id));
+  const playedCourses = filteredCourses.filter(c => playedCourseIds.has(c.id));
 
   return (
     <SafeAreaView 
       style={[styles.safeArea, { backgroundColor: theme.colors.background }]} 
       edges={['top']}
     >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: theme.colors.text }]}>Discover</Text>
+        <TouchableOpacity
+          style={styles.iconButton}
+          onPress={() => router.push('/modal')}
+          activeOpacity={0.7}
+        >
+          <IconSymbol
+            ios_icon_name="plus.circle.fill"
+            android_material_icon_name="add-circle"
+            size={28}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <View style={[styles.searchBar, { backgroundColor: theme.colors.card }]}>
+          <IconSymbol
+            ios_icon_name="magnifyingglass"
+            android_material_icon_name="search"
+            size={20}
+            color={theme.dark ? '#666' : '#999'}
+          />
+          <TextInput
+            style={[styles.searchInput, { color: theme.colors.text }]}
+            placeholder="Search courses..."
+            placeholderTextColor={theme.dark ? '#666' : '#999'}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <IconSymbol
+                ios_icon_name="xmark.circle.fill"
+                android_material_icon_name="cancel"
+                size={20}
+                color={theme.dark ? '#666' : '#999'}
+              />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
       >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>FAIRWAY</Text>
-          <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-            Your Golf Journey
-          </Text>
-        </View>
-
-        <View style={styles.statsContainer}>
-          <StatCard label="Rounds Played" value={rounds.length} icon="⛳" />
-          <StatCard label="Courses" value={uniqueCourses} icon="🏌️" />
-          <StatCard label="Avg Rating" value={averageRating} icon="⭐" />
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Recent Rounds
-          </Text>
-          <TouchableOpacity
-            onPress={() => router.push('/modal')}
-            style={[styles.addButton, { backgroundColor: colors.primary }]}
-            activeOpacity={0.8}
-          >
-            <IconSymbol
-              ios_icon_name="plus"
-              android_material_icon_name="add"
-              size={24}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {rounds.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>⛳</Text>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-              No Rounds Yet
+        {recommendedCourses.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Recommended for You
             </Text>
-            <Text style={[styles.emptyText, { color: theme.dark ? '#98989D' : '#666' }]}>
-              Start tracking your golf journey by logging your first round
-            </Text>
-            <TouchableOpacity
-              onPress={() => router.push('/modal')}
-              style={[styles.primaryButton, { backgroundColor: colors.primary }]}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.primaryButtonText}>Log Your First Round</Text>
-            </TouchableOpacity>
-          </View>
-        ) : (
-          <View style={styles.roundsList}>
-            {sortedRounds.map((round, index) => (
+            {recommendedCourses.map((course, index) => (
               <CourseCard
                 key={index}
-                round={round}
-                onPress={() => console.log('View round details:', round.id)}
+                course={course}
+                onPress={() => {
+                  console.log('Course pressed:', course.name);
+                }}
               />
             ))}
+          </View>
+        )}
+
+        {playedCourses.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+              Courses You&apos;ve Played
+            </Text>
+            {playedCourses.map((course, index) => {
+              const courseRounds = rounds.filter(r => r.courseId === course.id);
+              const avgRating = courseRounds.length > 0
+                ? Math.round(courseRounds.reduce((sum, r) => sum + r.rating, 0) / courseRounds.length)
+                : 0;
+              
+              return (
+                <CourseCard
+                  key={index}
+                  course={course}
+                  played={true}
+                  playCount={courseRounds.length}
+                  rating={avgRating}
+                  onPress={() => {
+                    console.log('Course pressed:', course.name);
+                  }}
+                />
+              );
+            })}
+          </View>
+        )}
+
+        {filteredCourses.length === 0 && (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>🔍</Text>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+              No courses found
+            </Text>
+            <Text style={[styles.emptyText, { color: theme.dark ? '#98989D' : '#666' }]}>
+              Try adjusting your search
+            </Text>
           </View>
         )}
       </ScrollView>
@@ -162,56 +162,53 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingTop: Platform.OS === 'android' ? 20 : 0,
     paddingBottom: 100,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 24,
-  },
-  title: {
-    fontSize: 36,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  subtitle: {
-    fontSize: 16,
-    marginTop: 4,
-  },
-  statsContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    gap: 12,
-    marginBottom: 24,
-  },
-  sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    marginBottom: 16,
+    paddingTop: Platform.OS === 'android' ? 20 : 8,
+    paddingBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: '700',
+  title: {
+    fontSize: 28,
+    fontWeight: '800',
+    letterSpacing: 1,
   },
-  addButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  iconButton: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
-    elevation: 3,
   },
-  roundsList: {
-    paddingBottom: 20,
+  searchContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 16,
+  },
+  section: {
+    marginBottom: 24,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    paddingHorizontal: 20,
   },
   emptyState: {
     alignItems: 'center',
@@ -233,18 +230,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
-    marginBottom: 32,
-  },
-  primaryButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

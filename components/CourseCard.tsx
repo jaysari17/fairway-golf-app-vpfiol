@@ -2,26 +2,34 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useTheme } from '@react-navigation/native';
-import { Round } from '@/types/golf';
 import { IconSymbol } from './IconSymbol';
+import { GolfCourse } from '@/types/golf';
+import { colors } from '@/styles/commonStyles';
 
 interface CourseCardProps {
-  round: Round;
+  course: GolfCourse;
+  played?: boolean;
+  playCount?: number;
+  rating?: number;
   onPress?: () => void;
 }
 
-export function CourseCard({ round, onPress }: CourseCardProps) {
+export function CourseCard({ course, played = false, playCount = 0, rating = 0, onPress }: CourseCardProps) {
   const theme = useTheme();
 
-  const formatDate = (date: Date) => {
-    const d = new Date(date);
-    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
-
-  const getRatingColor = (rating: number) => {
-    if (rating >= 80) return '#34C759';
-    if (rating >= 60) return '#FF9500';
-    return '#FF3B30';
+  const getCourseTypeIcon = (type?: string) => {
+    switch (type) {
+      case 'links':
+        return '🌊';
+      case 'parkland':
+        return '🌳';
+      case 'desert':
+        return '🏜️';
+      case 'mountain':
+        return '⛰️';
+      default:
+        return '⛳';
+    }
   };
 
   return (
@@ -31,58 +39,93 @@ export function CourseCard({ round, onPress }: CourseCardProps) {
       activeOpacity={0.7}
     >
       <View style={styles.header}>
-        <View style={styles.titleContainer}>
-          <Text style={[styles.courseName, { color: theme.colors.text }]} numberOfLines={1}>
-            {round.courseName}
-          </Text>
-          <View style={styles.locationRow}>
-            <IconSymbol
-              ios_icon_name="location.fill"
-              android_material_icon_name="location-on"
-              size={14}
-              color={theme.dark ? '#98989D' : '#666'}
-            />
-            <Text style={[styles.location, { color: theme.dark ? '#98989D' : '#666' }]}>
-              {round.courseLocation}
+        <View style={styles.headerLeft}>
+          <Text style={styles.typeIcon}>{getCourseTypeIcon(course.type)}</Text>
+          <View style={styles.headerText}>
+            <Text style={[styles.courseName, { color: theme.colors.text }]} numberOfLines={1}>
+              {course.name}
+            </Text>
+            <Text style={[styles.location, { color: theme.dark ? '#98989D' : '#666' }]} numberOfLines={1}>
+              {course.city}, {course.state}
             </Text>
           </View>
         </View>
-        <View style={[styles.ratingBadge, { backgroundColor: getRatingColor(round.rating) }]}>
-          <Text style={styles.ratingText}>{round.rating}</Text>
-        </View>
+        {played && (
+          <View style={[styles.playedBadge, { backgroundColor: colors.primary }]}>
+            <IconSymbol
+              ios_icon_name="checkmark"
+              android_material_icon_name="check"
+              size={14}
+              color="#FFFFFF"
+            />
+          </View>
+        )}
       </View>
 
       <View style={styles.details}>
         <View style={styles.detailItem}>
           <IconSymbol
-            ios_icon_name="calendar"
-            android_material_icon_name="calendar-today"
+            ios_icon_name="flag"
+            android_material_icon_name="flag"
             size={16}
             color={theme.dark ? '#98989D' : '#666'}
           />
           <Text style={[styles.detailText, { color: theme.dark ? '#98989D' : '#666' }]}>
-            {formatDate(round.date)}
+            {course.holes || 18} holes
           </Text>
         </View>
-        {round.score && (
+        <View style={styles.detailItem}>
+          <IconSymbol
+            ios_icon_name="arrow.up.right"
+            android_material_icon_name="trending-up"
+            size={16}
+            color={theme.dark ? '#98989D' : '#666'}
+          />
+          <Text style={[styles.detailText, { color: theme.dark ? '#98989D' : '#666' }]}>
+            Par {course.par || 72}
+          </Text>
+        </View>
+        {course.yardage && (
           <View style={styles.detailItem}>
             <IconSymbol
-              ios_icon_name="flag.fill"
-              android_material_icon_name="flag"
+              ios_icon_name="ruler"
+              android_material_icon_name="straighten"
               size={16}
               color={theme.dark ? '#98989D' : '#666'}
             />
             <Text style={[styles.detailText, { color: theme.dark ? '#98989D' : '#666' }]}>
-              Score: {round.score}
+              {course.yardage.toLocaleString()} yds
             </Text>
           </View>
         )}
       </View>
 
-      {round.review && (
-        <Text style={[styles.review, { color: theme.colors.text }]} numberOfLines={2}>
-          {round.review}
-        </Text>
+      {played && (
+        <View style={styles.playedInfo}>
+          <View style={styles.playedStat}>
+            <Text style={[styles.playedLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+              Played
+            </Text>
+            <Text style={[styles.playedValue, { color: theme.colors.text }]}>
+              {playCount} {playCount === 1 ? 'time' : 'times'}
+            </Text>
+          </View>
+          {rating > 0 && (
+            <View style={styles.playedStat}>
+              <Text style={[styles.playedLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Your Rating
+              </Text>
+              <View style={styles.ratingContainer}>
+                <Text style={[styles.playedValue, { color: colors.primary }]}>
+                  {rating}
+                </Text>
+                <Text style={[styles.ratingMax, { color: theme.dark ? '#98989D' : '#666' }]}>
+                  /100
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
       )}
     </TouchableOpacity>
   );
@@ -90,10 +133,10 @@ export function CourseCard({ round, onPress }: CourseCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
+    marginHorizontal: 20,
+    marginBottom: 12,
     padding: 16,
-    marginVertical: 8,
-    marginHorizontal: 16,
+    borderRadius: 16,
     boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.08)',
     elevation: 2,
   },
@@ -103,39 +146,38 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
-  titleContainer: {
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
     flex: 1,
-    marginRight: 12,
+    gap: 12,
+  },
+  typeIcon: {
+    fontSize: 32,
+  },
+  headerText: {
+    flex: 1,
   },
   courseName: {
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 4,
   },
-  locationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
   location: {
     fontSize: 14,
   },
-  ratingBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  playedBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  ratingText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
   details: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   detailItem: {
     flexDirection: 'row',
@@ -145,9 +187,30 @@ const styles = StyleSheet.create({
   detailText: {
     fontSize: 14,
   },
-  review: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginTop: 8,
+  playedInfo: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  playedStat: {
+    gap: 4,
+  },
+  playedLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  playedValue: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
+  ratingMax: {
+    fontSize: 12,
   },
 });

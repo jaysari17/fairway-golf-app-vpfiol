@@ -61,7 +61,7 @@ export default function OnboardingScreen() {
   const handleComplete = async () => {
     try {
       await StorageService.setOnboardingComplete();
-      router.replace('/(tabs)/(home)/');
+      router.replace('/(tabs)/(social)/');
     } catch (error) {
       console.error('Error completing onboarding:', error);
     }
