@@ -15,6 +15,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { StatCard } from '@/components/StatCard';
 import { useProfile } from '@/hooks/useProfile';
 import { useRounds } from '@/hooks/useRounds';
+import { useSocial } from '@/hooks/useSocial';
 import { UserProfile } from '@/types/golf';
 import { colors } from '@/styles/commonStyles';
 import { availableBadges } from '@/data/badges';
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const theme = useTheme();
   const { profile, updateProfile } = useProfile();
   const { rounds } = useRounds();
+  const { friends } = useSocial();
   
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
@@ -189,6 +191,39 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        <View style={styles.socialStats}>
+          <TouchableOpacity 
+            style={styles.socialStatItem}
+            onPress={() => Alert.alert('Coming Soon', 'Friends list will be available soon!')}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.socialStatValue, { color: theme.colors.text }]}>
+              {friends.length}
+            </Text>
+            <Text style={[styles.socialStatLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+              Friends
+            </Text>
+          </TouchableOpacity>
+          <View style={[styles.socialStatDivider, { backgroundColor: theme.colors.border }]} />
+          <View style={styles.socialStatItem}>
+            <Text style={[styles.socialStatValue, { color: theme.colors.text }]}>
+              {rounds.length}
+            </Text>
+            <Text style={[styles.socialStatLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+              Rounds
+            </Text>
+          </View>
+          <View style={[styles.socialStatDivider, { backgroundColor: theme.colors.border }]} />
+          <View style={styles.socialStatItem}>
+            <Text style={[styles.socialStatValue, { color: theme.colors.text }]}>
+              {uniqueCourses}
+            </Text>
+            <Text style={[styles.socialStatLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+              Courses
+            </Text>
+          </View>
+        </View>
+
         <View style={styles.statsSection}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Statistics</Text>
           <View style={styles.statsGrid}>
@@ -243,6 +278,30 @@ export default function ProfileScreen() {
             })}
           </View>
         </View>
+
+        <View style={styles.settingsSection}>
+          <TouchableOpacity
+            style={[styles.settingsButton, { backgroundColor: theme.colors.card }]}
+            onPress={() => Alert.alert('Coming Soon', 'Privacy settings will be available soon!')}
+            activeOpacity={0.7}
+          >
+            <IconSymbol
+              ios_icon_name="lock.shield"
+              android_material_icon_name="security"
+              size={20}
+              color={theme.colors.text}
+            />
+            <Text style={[styles.settingsButtonText, { color: theme.colors.text }]}>
+              Privacy Settings
+            </Text>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="chevron_right"
+              size={20}
+              color={theme.dark ? '#666' : '#999'}
+            />
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -256,7 +315,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 20,
+    paddingTop: 0,
+    paddingBottom: 100,
   },
   header: {
     alignItems: 'center',
@@ -373,6 +433,29 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
+  socialStats: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    marginBottom: 24,
+  },
+  socialStatItem: {
+    alignItems: 'center',
+  },
+  socialStatValue: {
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  socialStatLabel: {
+    fontSize: 14,
+  },
+  socialStatDivider: {
+    width: 1,
+    height: 40,
+  },
   statsSection: {
     paddingHorizontal: 20,
     marginBottom: 24,
@@ -427,5 +510,23 @@ const styles = StyleSheet.create({
   },
   badgeTextLocked: {
     opacity: 0.6,
+  },
+  settingsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  settingsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 16,
+    borderRadius: 12,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
+  },
+  settingsButtonText: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

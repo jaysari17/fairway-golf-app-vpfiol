@@ -1,0 +1,242 @@
+
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Friend, FriendRequest, FeedEvent, Notification, PrivacySettings } from '@/types/social';
+
+const SOCIAL_STORAGE_KEYS = {
+  FRIENDS: '@fairway_friends',
+  FRIEND_REQUESTS: '@fairway_friend_requests',
+  FEED_EVENTS: '@fairway_feed_events',
+  NOTIFICATIONS: '@fairway_notifications',
+  PRIVACY_SETTINGS: '@fairway_privacy_settings',
+  CURRENT_USER_ID: '@fairway_current_user_id',
+};
+
+export const SocialStorageService = {
+  // Current User
+  async getCurrentUserId(): Promise<string> {
+    try {
+      let userId = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.CURRENT_USER_ID);
+      if (!userId) {
+        userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.CURRENT_USER_ID, userId);
+      }
+      return userId;
+    } catch (error) {
+      console.error('Error getting current user ID:', error);
+      return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+  },
+
+  // Friends
+  async getFriends(): Promise<Friend[]> {
+    try {
+      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FRIENDS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting friends:', error);
+      return [];
+    }
+  },
+
+  async saveFriend(friend: Friend): Promise<void> {
+    try {
+      const friends = await this.getFriends();
+      const existingIndex = friends.findIndex(f => f.id === friend.id);
+      if (existingIndex >= 0) {
+        friends[existingIndex] = friend;
+      } else {
+        friends.push(friend);
+      }
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIENDS, JSON.stringify(friends));
+    } catch (error) {
+      console.error('Error saving friend:', error);
+      throw error;
+    }
+  },
+
+  async removeFriend(friendId: string): Promise<void> {
+    try {
+      const friends = await this.getFriends();
+      const filtered = friends.filter(f => f.id !== friendId);
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIENDS, JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error removing friend:', error);
+      throw error;
+    }
+  },
+
+  // Friend Requests
+  async getFriendRequests(): Promise<FriendRequest[]> {
+    try {
+      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting friend requests:', error);
+      return [];
+    }
+  },
+
+  async saveFriendRequest(request: FriendRequest): Promise<void> {
+    try {
+      const requests = await this.getFriendRequests();
+      const existingIndex = requests.findIndex(r => r.id === request.id);
+      if (existingIndex >= 0) {
+        requests[existingIndex] = request;
+      } else {
+        requests.push(request);
+      }
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS, JSON.stringify(requests));
+    } catch (error) {
+      console.error('Error saving friend request:', error);
+      throw error;
+    }
+  },
+
+  async removeFriendRequest(requestId: string): Promise<void> {
+    try {
+      const requests = await this.getFriendRequests();
+      const filtered = requests.filter(r => r.id !== requestId);
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS, JSON.stringify(filtered));
+    } catch (error) {
+      console.error('Error removing friend request:', error);
+      throw error;
+    }
+  },
+
+  // Feed Events
+  async getFeedEvents(): Promise<FeedEvent[]> {
+    try {
+      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting feed events:', error);
+      return [];
+    }
+  },
+
+  async saveFeedEvent(event: FeedEvent): Promise<void> {
+    try {
+      const events = await this.getFeedEvents();
+      events.unshift(event); // Add to beginning
+      // Keep only last 100 events
+      const trimmed = events.slice(0, 100);
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS, JSON.stringify(trimmed));
+    } catch (error) {
+      console.error('Error saving feed event:', error);
+      throw error;
+    }
+  },
+
+  async updateFeedEvent(eventId: string, updatedEvent: FeedEvent): Promise<void> {
+    try {
+      const events = await this.getFeedEvents();
+      const index = events.findIndex(e => e.id === eventId);
+      if (index !== -1) {
+        events[index] = updatedEvent;
+        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS, JSON.stringify(events));
+      }
+    } catch (error) {
+      console.error('Error updating feed event:', error);
+      throw error;
+    }
+  },
+
+  // Notifications
+  async getNotifications(): Promise<Notification[]> {
+    try {
+      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS);
+      return data ? JSON.parse(data) : [];
+    } catch (error) {
+      console.error('Error getting notifications:', error);
+      return [];
+    }
+  },
+
+  async saveNotification(notification: Notification): Promise<void> {
+    try {
+      const notifications = await this.getNotifications();
+      notifications.unshift(notification);
+      // Keep only last 50 notifications
+      const trimmed = notifications.slice(0, 50);
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(trimmed));
+    } catch (error) {
+      console.error('Error saving notification:', error);
+      throw error;
+    }
+  },
+
+  async markNotificationAsRead(notificationId: string): Promise<void> {
+    try {
+      const notifications = await this.getNotifications();
+      const notification = notifications.find(n => n.id === notificationId);
+      if (notification) {
+        notification.read = true;
+        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+      }
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  },
+
+  async markAllNotificationsAsRead(): Promise<void> {
+    try {
+      const notifications = await this.getNotifications();
+      notifications.forEach(n => n.read = true);
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      throw error;
+    }
+  },
+
+  // Privacy Settings
+  async getPrivacySettings(): Promise<PrivacySettings> {
+    try {
+      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS);
+      return data ? JSON.parse(data) : {
+        accountVisibility: 'friends',
+        showHandicap: true,
+        showCourseMap: true,
+        showRankingList: true,
+        showRecentActivity: true,
+        mutedFriends: [],
+      };
+    } catch (error) {
+      console.error('Error getting privacy settings:', error);
+      return {
+        accountVisibility: 'friends',
+        showHandicap: true,
+        showCourseMap: true,
+        showRankingList: true,
+        showRecentActivity: true,
+        mutedFriends: [],
+      };
+    }
+  },
+
+  async savePrivacySettings(settings: PrivacySettings): Promise<void> {
+    try {
+      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS, JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving privacy settings:', error);
+      throw error;
+    }
+  },
+
+  // Clear all social data
+  async clearAllSocialData(): Promise<void> {
+    try {
+      await AsyncStorage.multiRemove([
+        SOCIAL_STORAGE_KEYS.FRIENDS,
+        SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS,
+        SOCIAL_STORAGE_KEYS.FEED_EVENTS,
+        SOCIAL_STORAGE_KEYS.NOTIFICATIONS,
+        SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS,
+      ]);
+    } catch (error) {
+      console.error('Error clearing social data:', error);
+      throw error;
+    }
+  },
+};

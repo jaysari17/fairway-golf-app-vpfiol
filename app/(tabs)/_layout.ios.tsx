@@ -5,13 +5,13 @@ import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 export default function TabLayout() {
   return (
     <NativeTabs>
-      <NativeTabs.Trigger key="home" name="(home)">
+      <NativeTabs.Trigger key="social" name="(social)">
         <Icon sf="house.fill" />
-        <Label>Home</Label>
+        <Label>Social</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger key="log" name="modal" href="/modal">
         <Icon sf="plus.circle.fill" />
-        <Label>Log</Label>
+        <Label>Rank</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger key="profile" name="profile">
         <Icon sf="person.fill" />
