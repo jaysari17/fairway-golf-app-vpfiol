@@ -1,8 +1,7 @@
-
 {
   "expo": {
-    "name": "FAIRWAY",
-    "slug": "fairway",
+    "name": "Fairway",
+    "slug": "Fairway",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/app-icon.png",
@@ -81,5 +80,6 @@
     "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses.",
     "primaryColor": "#57C8A1",
     "privacy": "public"
-  }
+  },
+  "scheme": "Fairway"
 }
