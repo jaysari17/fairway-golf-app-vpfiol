@@ -94,20 +94,20 @@ export interface UserSocialProfile {
   handicap?: number;
   totalRounds: number;
   totalCourses: number;
-  topCourses: Array<{
+  topCourses: {
     courseId: string;
     courseName: string;
     courseLocation: string;
     rating: number;
     rank: number;
-  }>;
-  recentRatings: Array<{
+  }[];
+  recentRatings: {
     courseId: string;
     courseName: string;
     courseLocation: string;
     rating: number;
     date: Date;
-  }>;
+  }[];
   privacySettings: PrivacySettings;
 }
 

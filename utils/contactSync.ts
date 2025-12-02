@@ -37,7 +37,7 @@ export const ContactSyncService = {
     }
   },
 
-  async getPhoneContacts(): Promise<Array<{ name: string; phoneNumbers: string[]; emails: string[] }>> {
+  async getPhoneContacts(): Promise<{ name: string; phoneNumbers: string[]; emails: string[] }[]> {
     try {
       const hasPermission = await this.checkPermission();
       if (!hasPermission) {
@@ -134,14 +134,14 @@ export const ContactSyncService = {
     }
   },
 
-  async getMockUsers(): Promise<Array<{ 
+  async getMockUsers(): Promise<{ 
     userId: string; 
     username: string; 
     displayName: string; 
     phoneNumber: string; 
     email: string;
     avatar?: string;
-  }>> {
+  }[]> {
     // This simulates a backend database of users
     // In production, you would fetch this from your API
     // The API would search your user database for matching phone numbers and emails

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, Modal, TouchableOpacity, Alert } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -49,17 +49,7 @@ export default function RatingFlowScreen() {
   const [rankedCourses, setRankedCourses] = useState<any[]>([]);
   const [playCount, setPlayCount] = useState(0);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (currentStep === 'comparison' && comparisonCourses.length > 0) {
-      loadCurrentComparisonCourse();
-    }
-  }, [currentStep, currentComparisonIndex]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const ratings = await RatingStorageService.getRatings();
       const rounds = await StorageService.getRounds();
@@ -82,9 +72,9 @@ export default function RatingFlowScreen() {
       console.error('Error loading rating data:', error);
       Alert.alert('Error', 'Failed to load rating data');
     }
-  };
+  }, [courseId]);
 
-  const loadCurrentComparisonCourse = async () => {
+  const loadCurrentComparisonCourse = useCallback(async () => {
     try {
       if (currentComparisonIndex >= comparisonCourses.length) {
         setCurrentComparisonCourse(null);
@@ -114,7 +104,17 @@ export default function RatingFlowScreen() {
       console.error('Error loading comparison course:', error);
       setCurrentComparisonCourse(null);
     }
-  };
+  }, [currentComparisonIndex, comparisonCourses]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    if (currentStep === 'comparison' && comparisonCourses.length > 0) {
+      loadCurrentComparisonCourse();
+    }
+  }, [currentStep, currentComparisonIndex, comparisonCourses.length, loadCurrentComparisonCourse]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
     setPlayAgainResponse(response);
