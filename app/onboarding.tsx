@@ -12,7 +12,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/styles/commonStyles';
-import { StorageService } from '@/utils/storage';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -58,13 +57,9 @@ export default function OnboardingScreen() {
     handleComplete();
   };
 
-  const handleComplete = async () => {
-    try {
-      await StorageService.setOnboardingComplete();
-      router.replace('/(tabs)/(social)/');
-    } catch (error) {
-      console.error('Error completing onboarding:', error);
-    }
+  const handleComplete = () => {
+    // Navigate to profile setup instead of directly to the app
+    router.replace('/profile-setup');
   };
 
   const contentStyle = useAnimatedStyle(() => {

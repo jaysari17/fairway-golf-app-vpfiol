@@ -29,16 +29,22 @@ export default function ProfileScreen() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState('');
   const [handicap, setHandicap] = useState('');
 
   useEffect(() => {
     if (profile) {
       setUsername(profile.username);
+      setEmail(profile.email || '');
+      setPhoneNumber(profile.phoneNumber || '');
       setBio(profile.bio || '');
       setHandicap(profile.handicap?.toString() || '');
     } else {
       setUsername('Golf Enthusiast');
+      setEmail('');
+      setPhoneNumber('');
       setBio('');
       setHandicap('');
     }
@@ -49,10 +55,13 @@ export default function ProfileScreen() {
       const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
       const updatedProfile: UserProfile = {
         username: username.trim() || 'Golf Enthusiast',
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
         bio: bio.trim() || undefined,
         handicap: handicap ? parseFloat(handicap) : undefined,
         totalRounds: rounds.length,
         totalCourses: uniqueCourses,
+        contactsSynced: profile?.contactsSynced || false,
       };
       await updateProfile(updatedProfile);
       setIsEditing(false);
@@ -110,6 +119,37 @@ export default function ProfileScreen() {
               />
               <TextInput
                 style={[
+                  styles.input,
+                  { 
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text 
+                  }
+                ]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email"
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text 
+                  }
+                ]}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                placeholder="Phone number"
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                keyboardType="phone-pad"
+              />
+              <TextInput
+                style={[
                   styles.bioInput,
                   { 
                     backgroundColor: theme.colors.card,
@@ -161,6 +201,16 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.profileInfo}>
               <Text style={[styles.name, { color: theme.colors.text }]}>{username}</Text>
+              {email && (
+                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
+                  {email}
+                </Text>
+              )}
+              {phoneNumber && (
+                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
+                  {phoneNumber}
+                </Text>
+              )}
               {bio && (
                 <Text style={[styles.bio, { color: theme.dark ? '#98989D' : '#666' }]}>
                   {bio}
@@ -345,12 +395,17 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  contactInfo: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   bio: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+    marginTop: 8,
     marginBottom: 12,
   },
   handicapBadge: {
@@ -358,6 +413,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: 'rgba(87, 200, 161, 0.15)',
+    marginTop: 8,
     marginBottom: 16,
   },
   handicapText: {
@@ -389,6 +445,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  input: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 16,
   },
   bioInput: {
     paddingVertical: 12,

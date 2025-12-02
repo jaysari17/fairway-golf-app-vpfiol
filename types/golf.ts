@@ -28,11 +28,14 @@ export interface Round {
 
 export interface UserProfile {
   username: string;
+  email: string;
+  phoneNumber: string;
   avatar?: string;
   bio?: string;
   handicap?: number;
   totalRounds: number;
   totalCourses: number;
+  contactsSynced?: boolean;
 }
 
 export interface Badge {

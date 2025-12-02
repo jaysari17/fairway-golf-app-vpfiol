@@ -92,12 +92,22 @@ export default function RootLayout() {
           <GestureHandlerRootView>
             <Stack>
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+              <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
+              <Stack.Screen name="contact-sync" options={{ headerShown: false }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen
                 name="modal"
                 options={{
                   presentation: "modal",
                   title: "Log Round",
+                }}
+              />
+              <Stack.Screen
+                name="rating-flow"
+                options={{
+                  presentation: "modal",
+                  title: "Rate Course",
+                  headerShown: false,
                 }}
               />
               <Stack.Screen

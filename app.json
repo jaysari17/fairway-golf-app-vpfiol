@@ -1,3 +1,4 @@
+
 {
   "expo": {
     "name": "Fairway",
@@ -20,7 +21,8 @@
         "NSPhotoLibraryUsageDescription": "FAIRWAY needs access to your photo library to let you add course photos to your rounds.",
         "NSCameraUsageDescription": "FAIRWAY needs access to your camera to let you take photos of courses you play.",
         "NSPhotoLibraryAddUsageDescription": "FAIRWAY needs permission to save photos to your library.",
-        "NSLocationWhenInUseUsageDescription": "FAIRWAY uses your location to help you discover nearby golf courses."
+        "NSLocationWhenInUseUsageDescription": "FAIRWAY uses your location to help you discover nearby golf courses.",
+        "NSContactsUsageDescription": "FAIRWAY needs access to your contacts to help you find and connect with friends who are already using the app."
       },
       "buildNumber": "1",
       "config": {
@@ -40,7 +42,8 @@
         "READ_EXTERNAL_STORAGE",
         "WRITE_EXTERNAL_STORAGE",
         "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION"
+        "ACCESS_COARSE_LOCATION",
+        "READ_CONTACTS"
       ]
     },
     "web": {
@@ -64,6 +67,12 @@
         {
           "photosPermission": "FAIRWAY needs access to your photos to let you add course images to your rounds.",
           "cameraPermission": "FAIRWAY needs access to your camera to let you take photos of courses."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "FAIRWAY needs access to your contacts to help you find and connect with friends who are already using the app."
         }
       ]
     ],
