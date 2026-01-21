@@ -1,8 +1,7 @@
-
 {
   "expo": {
-    "name": "FAIRWAY",
-    "slug": "fairway",
+    "name": "Fairway",
+    "slug": "Fairway",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/natively-dark.png",
@@ -116,5 +115,6 @@
     "primaryColor": "#57C8A1",
     "privacy": "public",
     "githubUrl": "https://github.com/yourusername/fairway"
-  }
+  },
+  "scheme": "Fairway"
 }
