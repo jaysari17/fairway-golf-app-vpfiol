@@ -108,13 +108,15 @@ export default function RatingFlowScreen() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (currentStep === 'comparison' && comparisonCourses.length > 0) {
       loadCurrentComparisonCourse();
     }
-  }, [currentStep, comparisonCourses.length, loadCurrentComparisonCourse]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, comparisonCourses.length]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
     setPlayAgainResponse(response);

@@ -11,5 +11,9 @@ node_modules/
 *.bundle.js
 *.bundle.js.map
 
-# Ignore Node.js scripts
+# Ignore Node.js scripts and config files
 verify-launch-ready.js
+generate-placeholder-icons.js
+*.config.js
+babel.config.js
+metro.config.js

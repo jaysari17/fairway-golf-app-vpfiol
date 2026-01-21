@@ -5,11 +5,11 @@
     "slug": "fairway",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/fairway-icon.png",
+    "icon": "./assets/images/natively-dark.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/fairway-icon.png",
+      "image": "./assets/images/natively-dark.png",
       "resizeMode": "contain",
       "backgroundColor": "#57C8A1"
     },
@@ -34,7 +34,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/fairway-icon-foreground.png",
+        "foregroundImage": "./assets/images/natively-dark.png",
         "backgroundColor": "#57C8A1"
       },
       "package": "com.fairway.golftracker",
@@ -66,7 +66,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/fairway-icon.png",
+      "favicon": "./assets/images/natively-dark.png",
       "bundler": "metro",
       "name": "FAIRWAY",
       "shortName": "FAIRWAY",
@@ -82,7 +82,7 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#57C8A1",
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/natively-dark.png",
           "imageWidth": 200
         }
       ],
