@@ -1,6 +1,4 @@
 
-#!/usr/bin/env node
-
 /**
  * Fairway Launch Readiness Verification Script
  * 
