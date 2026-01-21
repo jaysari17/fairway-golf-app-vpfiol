@@ -1,204 +1,156 @@
 
-# FAIRWAY - Quick Reference Card
+# 🎯 Fairway - Quick Reference Card
 
-## 🚀 Quick Start
+## 🚀 Launch Commands
 
 ```bash
-# Install dependencies
-npm install
+# Verify everything is ready
+npm run verify-launch
 
-# Run app
-npm run dev
+# Generate icons
+open assets/images/generate-icons.html
+
+# Set up EAS
+eas init
 
 # Build for production
-eas build --platform ios --profile production
-eas build --platform android --profile production
+eas build --platform all --profile production
 
 # Submit to stores
-eas submit --platform ios
-eas submit --platform android
+eas submit --platform all --profile production
 ```
 
-## 📁 Key Files
+## 📱 App Information
 
-| File | Purpose |
-|------|---------|
-| `app/rating-flow.tsx` | Main rating flow screen |
-| `components/rating/*` | Rating step components |
-| `hooks/useRatingTrigger.ts` | Rating trigger logic |
-| `utils/ratingAlgorithm.ts` | Score calculation |
-| `utils/ratingStorage.ts` | Data persistence |
-| `utils/appStoreReview.ts` | Review requests |
-| `app.json` | App configuration |
-| `eas.json` | Build configuration |
+| Item | Value |
+|------|-------|
+| **Name** | Fairway |
+| **Tagline** | Track Your Golf Journey |
+| **Version** | 1.0.0 |
+| **iOS Bundle ID** | com.fairway.golftracker |
+| **Android Package** | com.fairway.golftracker |
+| **Category** | Sports / Social Networking |
 
 ## 🎨 Brand Colors
 
-```typescript
-primary: '#57C8A1'    // Mint green
-secondary: '#228B22'  // Dark forest green
-background: '#F8F8FF' // Off-white
-text: '#333333'       // Dark gray
+```
+Primary:   #57C8A1  (Deep mint green)
+Accent:    #1a4d3a  (Dark forest green)
+Light BG:  #FFFFFF
+Dark BG:   #000000
 ```
 
-## 📊 Rating Algorithm
+## 📋 Required Icons
 
-```typescript
-finalScore = (
-  playAgainScore * 0.3 +      // 30% weight
-  comparisonScore * 0.2 +     // 20% weight
-  positionScore * 0.3 +       // 30% weight
-  neighborScore * 0.2         // 20% weight
-)
-```
+| Icon | Size | Location |
+|------|------|----------|
+| App Icon (iOS) | 1024x1024 | `assets/images/app-icon.png` |
+| Adaptive Icon (Android) | 1024x1024 | `assets/images/adaptive-icon.png` |
+| Splash Icon | 400x400 | `assets/images/splash-icon.png` |
 
-## 🔄 Rating Flow Steps
+## 📸 Screenshot Sizes
 
-1. **Play Again**: Definitely / Maybe / No
-2. **Comparisons**: 3 side-by-side comparisons
-3. **Drag-to-Rank**: Tap to place in list
-4. **Confirmation**: Show final score
+### iOS
+- iPhone 6.7": 1290 x 2796
+- iPhone 6.5": 1242 x 2688
+- iPad Pro 12.9": 2048 x 2732
 
-## 📱 Required Assets
+### Android
+- Phone: 1080 x 1920 (recommended)
+- Tablet: 1920 x 1080 (optional)
 
-- [ ] App Icon: 1024x1024px
-- [ ] Splash Screen: 1284x2778px
-- [ ] iOS Screenshots: 1290x2796px (5-10 images)
-- [ ] Android Screenshots: 1080x1920px (5-10 images)
-- [ ] Privacy Policy: Hosted URL
-- [ ] Terms of Service: Hosted URL
+## 🔑 Key Features (for App Store)
 
-## ⚙️ Configuration
+1. **Course Tracking** - Log every round
+2. **Smart Ratings** - Comparison-based rating system
+3. **Social Network** - Connect with friends
+4. **Personal Profile** - Golf taste profile
+5. **Discovery** - Find new courses
+6. **Progress** - Badges and achievements
 
-### app.json
-```json
-{
-  "name": "FAIRWAY",
-  "slug": "fairway",
-  "version": "1.0.0",
-  "ios": {
-    "bundleIdentifier": "com.fairway.golftracker"
-  },
-  "android": {
-    "package": "com.fairway.golftracker"
-  }
-}
-```
+## 📝 App Store Description (Short)
 
-### eas.json
-```json
-{
-  "build": {
-    "production": {
-      "autoIncrement": true
-    }
-  }
-}
-```
+"Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses."
 
-## 🧪 Testing
+## 🔍 Keywords
 
-```bash
-# Test rating flow
-1. Log a round
-2. Complete all 4 steps
-3. Verify score calculated
-4. Check data persists
+golf, golf courses, golf tracker, course ratings, golf social, golf friends, golf stats, golf profile, course reviews, golf app
 
-# Test triggers
-1. Log round without rating
-2. Close app
-3. Reopen after 1+ hour
-4. Rating flow should appear
-```
+## 🔐 Permissions
 
-## 📝 App Store Info
+| Permission | Reason |
+|------------|--------|
+| Camera | Take photos of courses |
+| Photo Library | Add course photos |
+| Location | Discover nearby courses |
+| Contacts | Find friends on the app |
 
-**Name**: FAIRWAY
-**Subtitle**: Golf Course Tracker
-**Category**: Sports
-**Age Rating**: 4+ / Everyone
-**Price**: Free
+## 📞 URLs
 
-**Description**: Track rounds, rate courses, build your golf profile
+| Type | URL |
+|------|-----|
+| Privacy Policy | https://yourdomain.com/privacy |
+| Terms of Service | https://yourdomain.com/terms |
+| Support | https://yourdomain.com/support |
+| Website | https://yourdomain.com |
 
-## 🔒 Privacy
+## ⏱️ Timeline
 
-- No data collection
-- All data stored locally
-- No server communication
-- No user tracking
-- No analytics
+| Task | Time |
+|------|------|
+| Generate icons | 5 min |
+| EAS setup | 10 min |
+| App Store setup | 1 hour |
+| Screenshots | 1-2 hours |
+| Build & test | 30 min |
+| Submit | 15 min |
+| **Total** | **3-4 hours** |
+| Review (iOS) | 1-3 days |
+| Review (Android) | 1-7 days |
 
-## 📞 Quick Links
+## 🎯 Pre-Launch Checklist
 
-- **Expo Docs**: https://docs.expo.dev
-- **EAS Build**: https://docs.expo.dev/build/introduction/
-- **App Store Connect**: https://appstoreconnect.apple.com
-- **Play Console**: https://play.google.com/console
-
-## ⚡ Common Commands
-
-```bash
-# Development
-npm run dev          # Start dev server
-npm run ios          # Run on iOS
-npm run android      # Run on Android
-
-# EAS
-eas login            # Login to Expo
-eas build:configure  # Configure builds
-eas build            # Build app
-eas submit           # Submit to stores
-
-# Debugging
-npx expo start --clear  # Clear cache
-npx expo doctor         # Check for issues
-```
-
-## 🐛 Troubleshooting
-
-| Issue | Solution |
-|-------|----------|
-| Rating flow doesn't appear | Check console logs, verify trigger created |
-| App crashes | Check error logs, verify all imports |
-| Build fails | Check bundle IDs, verify EAS config |
-| Review prompt doesn't show | Only works on physical devices |
+- [ ] Icons generated
+- [ ] EAS project initialized
+- [ ] App Store Connect configured
+- [ ] Google Play Console configured
+- [ ] Screenshots prepared
+- [ ] Privacy policy live
+- [ ] Terms of service live
+- [ ] Tested on iOS
+- [ ] Tested on Android
+- [ ] Builds successful
+- [ ] Ready to submit
 
 ## 📚 Documentation
 
-- `IMPLEMENTATION_COMPLETE.md` - Full implementation details
-- `APP_STORE_SUBMISSION_CHECKLIST.md` - Submission guide
-- `ASSET_CREATION_GUIDE.md` - Asset creation help
-- `IMMEDIATE_ACTION_ITEMS.md` - What to do next
-- `RATING_SYSTEM_IMPLEMENTATION.md` - Technical details
-- `QUICK_START.md` - Getting started guide
+- **Launch Guide**: [LAUNCH_READY.md](LAUNCH_READY.md)
+- **Detailed Steps**: [APP_STORE_LAUNCH_GUIDE.md](APP_STORE_LAUNCH_GUIDE.md)
+- **Full Checklist**: [FINAL_PRE_LAUNCH_CHECKLIST.md](FINAL_PRE_LAUNCH_CHECKLIST.md)
+- **Development**: [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
+- **Troubleshooting**: [TROUBLESHOOTING.md](TROUBLESHOOTING.md)
 
-## ✅ Pre-Launch Checklist
+## 🆘 Quick Help
 
-- [ ] Assets created
-- [ ] Privacy policy hosted
-- [ ] EAS configured
-- [ ] App tested
-- [ ] Builds created
-- [ ] Stores configured
-- [ ] Submitted for review
+**Icons not showing?**
+```bash
+npx expo prebuild --clean
+```
 
-## 🎯 Success Metrics
+**Build failing?**
+```bash
+npm install
+eas build:configure
+```
 
-- App launches in < 3 seconds
-- Rating flow completion rate > 80%
-- No crashes
-- Smooth animations
-- Data persists correctly
+**Need EAS project ID?**
+```bash
+eas init
+# Then update app.json with the project ID
+```
 
 ## 🎉 You're Ready!
 
-Everything is implemented and working. Just need to:
-1. Create assets (1-2 hours)
-2. Build app (1 hour)
-3. Submit (1 hour)
+Run `npm run verify-launch` to check everything, then follow [LAUNCH_READY.md](LAUNCH_READY.md) for step-by-step launch instructions.
 
-**Total: 3-4 hours to launch!** 🚀
-
-Good luck! 🏌️⛳
+Good luck! 🚀⛳

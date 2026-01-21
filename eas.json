@@ -1,3 +1,4 @@
+
 {
   "cli": {
     "version": ">= 5.0.0"
@@ -21,6 +22,9 @@
       },
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-api-url.com"
       }
     },
     "production": {
@@ -28,11 +32,16 @@
       "ios": {
         "buildConfiguration": "Release",
         "simulator": false,
-        "resourceClass": "m-medium"
+        "resourceClass": "m-medium",
+        "image": "latest"
       },
       "android": {
         "buildType": "aab",
-        "resourceClass": "medium"
+        "resourceClass": "medium",
+        "image": "latest"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-production-api-url.com"
       }
     }
   },
@@ -41,11 +50,13 @@
       "ios": {
         "appleId": "your-apple-id@example.com",
         "ascAppId": "1234567890",
-        "appleTeamId": "ABCDE12345"
+        "appleTeamId": "ABCDE12345",
+        "sku": "fairway-golf-tracker"
       },
       "android": {
-        "serviceAccountKeyPath": "./path/to/api-key.json",
-        "track": "internal"
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal",
+        "releaseStatus": "draft"
       }
     }
   }

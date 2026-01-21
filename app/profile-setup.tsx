@@ -95,7 +95,7 @@ export default function ProfileSetupScreen() {
             <View style={styles.header}>
               <Text style={styles.title}>Create Your Profile</Text>
               <Text style={styles.subtitle}>
-                Let&apos;s get you set up to track your golf journey
+                Let's get you set up to track your golf journey
               </Text>
             </View>
 

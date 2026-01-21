@@ -1,39 +1,42 @@
+
 {
   "expo": {
-    "name": "Fairway",
-    "slug": "Fairway",
+    "name": "FAIRWAY",
+    "slug": "fairway",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/app-icon.png",
+    "icon": "./assets/images/fairway-icon.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/fairway-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#57C8A1"
     },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fairway.golftracker",
+      "buildNumber": "1",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
-        "NSPhotoLibraryUsageDescription": "FAIRWAY needs access to your photo library to let you add course photos to your rounds.",
-        "NSCameraUsageDescription": "FAIRWAY needs access to your camera to let you take photos of courses you play.",
-        "NSPhotoLibraryAddUsageDescription": "FAIRWAY needs permission to save photos to your library.",
-        "NSLocationWhenInUseUsageDescription": "FAIRWAY uses your location to help you discover nearby golf courses.",
-        "NSContactsUsageDescription": "FAIRWAY needs access to your contacts to help you find and connect with friends who are already using the app."
+        "NSPhotoLibraryUsageDescription": "Fairway needs access to your photo library to let you add course photos to your rounds.",
+        "NSCameraUsageDescription": "Fairway needs access to your camera to let you take photos of courses you play.",
+        "NSPhotoLibraryAddUsageDescription": "Fairway needs permission to save photos to your library.",
+        "NSLocationWhenInUseUsageDescription": "Fairway uses your location to help you discover nearby golf courses.",
+        "NSContactsUsageDescription": "Fairway needs access to your contacts to help you find and connect with friends who are already using the app."
       },
-      "buildNumber": "1",
       "config": {
         "usesNonExemptEncryption": false
-      }
+      },
+      "associatedDomains": [
+        "applinks:fairway.app"
+      ]
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/app-icon.png",
+        "foregroundImage": "./assets/images/fairway-icon-foreground.png",
         "backgroundColor": "#57C8A1"
       },
-      "edgeToEdgeEnabled": true,
       "package": "com.fairway.golftracker",
       "versionCode": 1,
       "permissions": [
@@ -43,11 +46,33 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "READ_CONTACTS"
+      ],
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "fairway.app",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
       ]
     },
     "web": {
-      "favicon": "./assets/images/app-icon.png",
-      "bundler": "metro"
+      "favicon": "./assets/images/fairway-icon.png",
+      "bundler": "metro",
+      "name": "FAIRWAY",
+      "shortName": "FAIRWAY",
+      "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile.",
+      "themeColor": "#57C8A1",
+      "backgroundColor": "#57C8A1"
     },
     "plugins": [
       "expo-font",
@@ -64,14 +89,14 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "FAIRWAY needs access to your photos to let you add course images to your rounds.",
-          "cameraPermission": "FAIRWAY needs access to your camera to let you take photos of courses."
+          "photosPermission": "Fairway needs access to your photos to let you add course images to your rounds.",
+          "cameraPermission": "Fairway needs access to your camera to let you take photos of courses."
         }
       ],
       [
         "expo-contacts",
         {
-          "contactsPermission": "FAIRWAY needs access to your contacts to help you find and connect with friends who are already using the app."
+          "contactsPermission": "Fairway needs access to your contacts to help you find and connect with friends who are already using the app."
         }
       ]
     ],
@@ -80,14 +105,16 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {},
+      "router": {
+        "origin": false
+      },
       "eas": {
         "projectId": "your-project-id-here"
       }
     },
     "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses.",
     "primaryColor": "#57C8A1",
-    "privacy": "public"
-  },
-  "scheme": "Fairway"
+    "privacy": "public",
+    "githubUrl": "https://github.com/yourusername/fairway"
+  }
 }

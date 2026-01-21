@@ -108,13 +108,13 @@ export default function RatingFlowScreen() {
 
   useEffect(() => {
     loadData();
-  }, [loadData]);
+  }, []);
 
   useEffect(() => {
     if (currentStep === 'comparison' && comparisonCourses.length > 0) {
       loadCurrentComparisonCourse();
     }
-  }, [currentStep, comparisonCourses.length, loadCurrentComparisonCourse]);
+  }, [currentStep, comparisonCourses.length]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
     setPlayAgainResponse(response);
