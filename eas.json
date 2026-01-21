@@ -48,9 +48,9 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "YOUR_APPLE_ID@example.com",
+        "appleId": "sarijason@yahoo.com",
         "ascAppId": "LEAVE_EMPTY_UNTIL_APP_CREATED_IN_APP_STORE_CONNECT",
-        "appleTeamId": "YOUR_TEAM_ID_FROM_APPLE_DEVELOPER_PORTAL",
+        "appleTeamId": "JS45B47FNT",
         "sku": "fairway-golf-tracker"
       },
       "android": {
