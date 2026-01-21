@@ -49,7 +49,7 @@
     "production": {
       "ios": {
         "appleId": "sarijason@yahoo.com",
-        "ascAppId": "LEAVE_EMPTY_UNTIL_APP_CREATED_IN_APP_STORE_CONNECT",
+        "ascAppId": {
         "appleTeamId": "JS45B47FNT",
         "sku": "fairway-golf-tracker"
       },
