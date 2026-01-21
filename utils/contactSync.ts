@@ -134,11 +134,11 @@ export const ContactSyncService = {
     }
   },
 
-  async getMockUsers(): Promise<{ 
-    userId: string; 
-    username: string; 
-    displayName: string; 
-    phoneNumber: string; 
+  async getMockUsers(): Promise<{
+    userId: string;
+    username: string;
+    displayName: string;
+    phoneNumber: string;
     email: string;
     avatar?: string;
   }[]> {

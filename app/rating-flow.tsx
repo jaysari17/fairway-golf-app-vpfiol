@@ -114,7 +114,7 @@ export default function RatingFlowScreen() {
     if (currentStep === 'comparison' && comparisonCourses.length > 0) {
       loadCurrentComparisonCourse();
     }
-  }, [currentStep, currentComparisonIndex, comparisonCourses.length, loadCurrentComparisonCourse]);
+  }, [currentStep, comparisonCourses.length, loadCurrentComparisonCourse]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
     setPlayAgainResponse(response);
@@ -264,7 +264,9 @@ export default function RatingFlowScreen() {
         );
       
       case 'comparison':
-        if (!currentComparisonCourse) return null;
+        if (!currentComparisonCourse) {
+          return null;
+        }
         
         return (
           <ComparisonStep
@@ -301,6 +303,8 @@ export default function RatingFlowScreen() {
             onComplete={handleComplete}
           />
         );
+      default:
+        return null;
     }
   };
 
