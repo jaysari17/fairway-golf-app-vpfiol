@@ -1,16 +1,17 @@
+
 {
   "expo": {
     "name": "Fairway",
     "slug": "Fairway",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/natively-dark.png",
+    "icon": "./assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/natively-dark.png",
+      "image": "./assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png",
       "resizeMode": "contain",
-      "backgroundColor": "#57C8A1"
+      "backgroundColor": "#8BC34A"
     },
     "ios": {
       "supportsTablet": true,
@@ -33,8 +34,8 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/natively-dark.png",
-        "backgroundColor": "#57C8A1"
+        "foregroundImage": "./assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png",
+        "backgroundColor": "#8BC34A"
       },
       "package": "com.fairway.golftracker",
       "versionCode": 1,
@@ -65,13 +66,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/natively-dark.png",
+      "favicon": "./assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png",
       "bundler": "metro",
       "name": "FAIRWAY",
       "shortName": "FAIRWAY",
       "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile.",
-      "themeColor": "#57C8A1",
-      "backgroundColor": "#57C8A1"
+      "themeColor": "#8BC34A",
+      "backgroundColor": "#8BC34A"
     },
     "plugins": [
       "expo-font",
@@ -80,8 +81,8 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#57C8A1",
-          "image": "./assets/images/natively-dark.png",
+          "backgroundColor": "#8BC34A",
+          "image": "./assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png",
           "imageWidth": 200
         }
       ],
@@ -112,7 +113,7 @@
       }
     },
     "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses.",
-    "primaryColor": "#57C8A1",
+    "primaryColor": "#8BC34A",
     "privacy": "public",
     "githubUrl": "https://github.com/yourusername/fairway"
   },
