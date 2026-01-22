@@ -12,6 +12,12 @@ export default function TabLayout() {
       label: 'Social',
     },
     {
+      name: '(home)',
+      route: '/(tabs)/(home)/',
+      icon: 'search',
+      label: 'Discover',
+    },
+    {
       name: 'log',
       route: '/modal',
       icon: 'add-circle',

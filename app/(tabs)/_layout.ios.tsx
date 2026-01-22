@@ -9,6 +9,10 @@ export default function TabLayout() {
         <Icon sf="house.fill" />
         <Label>Social</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger key="home" name="(home)">
+        <Icon sf="magnifyingglass" />
+        <Label>Discover</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger key="log" name="modal" href="/modal">
         <Icon sf="plus.circle.fill" />
         <Label>Rate</Label>
