@@ -204,7 +204,7 @@ export default function ProfileScreen() {
                 ]}
                 value={email}
                 onChangeText={setEmail}
-                placeholder="Email"
+                placeholder="Email (private)"
                 placeholderTextColor={theme.dark ? '#666' : '#999'}
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -220,7 +220,7 @@ export default function ProfileScreen() {
                 ]}
                 value={phoneNumber}
                 onChangeText={setPhoneNumber}
-                placeholder="Phone number"
+                placeholder="Phone number (private)"
                 placeholderTextColor={theme.dark ? '#666' : '#999'}
                 keyboardType="phone-pad"
               />
@@ -277,16 +277,6 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.profileInfo}>
               <Text style={[styles.name, { color: theme.colors.text }]}>{username}</Text>
-              {email && (
-                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
-                  {email}
-                </Text>
-              )}
-              {phoneNumber && (
-                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
-                  {phoneNumber}
-                </Text>
-              )}
               {bio && (
                 <Text style={[styles.bio, { color: theme.dark ? '#98989D' : '#666' }]}>
                   {bio}
@@ -491,10 +481,6 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 4,
-  },
-  contactInfo: {
-    fontSize: 14,
     marginBottom: 4,
   },
   bio: {
