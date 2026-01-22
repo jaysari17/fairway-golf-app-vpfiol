@@ -99,6 +99,7 @@ export default function ProfileSetupScreen() {
           email: email.trim(),
           phoneNumber: phoneNumber.trim(),
           handicap: handicap ? parseFloat(handicap) : undefined,
+          displayName: username.trim(), // Use username as display name initially
           totalRounds: 0,
           totalCourses: 0,
           contactsSynced: false,

@@ -23,8 +23,8 @@ export interface Round {
   courseId: string;
   courseName: string;
   courseLocation: string;
-  date: Date;
-  rating: number; // 1-100
+  datePlayed: Date; // Changed from 'date' to match database column 'date_played'
+  rating?: number; // 1-100 (optional since not all rounds have ratings)
   review?: string;
   score?: number;
   teeBox?: string;
@@ -33,22 +33,29 @@ export interface Round {
 }
 
 export interface UserProfile {
+  id?: string; // Database ID
+  userId?: string; // Auth user ID (user_id in database)
   username: string;
-  email: string;
-  phoneNumber: string;
-  avatar?: string;
+  email?: string; // Email is stored in auth.users, not profiles
+  displayName?: string; // display_name in database
+  phoneNumber?: string; // phone_number in database
+  avatar?: string; // avatar_url in database
   bio?: string;
   handicap?: number;
-  totalRounds: number;
-  totalCourses: number;
-  contactsSynced?: boolean;
+  totalRounds?: number; // Calculated field, not in database
+  totalCourses?: number; // Calculated field, not in database
+  contactsSynced?: boolean; // Local field, not in database
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  earned: boolean;
-  earnedDate?: Date;
+  id: string; // Database ID
+  userId?: string; // user_id in database
+  badgeId?: string; // badge_id in database (identifier for badge type)
+  name: string; // badge_name in database
+  description?: string; // badge_description in database
+  icon?: string; // badge_icon in database
+  earned?: boolean; // Calculated field (if earnedAt exists)
+  earnedAt?: Date; // earned_at in database
 }

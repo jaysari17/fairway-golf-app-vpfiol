@@ -43,6 +43,11 @@ export const SupabaseStorageService = {
         .single();
 
       if (error) {
+        // If profile doesn't exist yet, return null (not an error during signup)
+        if (error.code === 'PGRST116') {
+          console.log('Profile not found for user:', targetUserId);
+          return null;
+        }
         console.error('Error fetching profile:', error);
         return null;
       }
@@ -52,9 +57,19 @@ export const SupabaseStorageService = {
       // Get email from auth.users
       const user = (await supabase.auth.getUser()).data.user;
       
+      // Map database fields to UserProfile interface
       return {
-        ...data,
+        id: data.id,
+        userId: data.user_id,
+        username: data.username,
+        displayName: data.display_name,
         email: user?.email,
+        phoneNumber: data.phone_number,
+        avatar: data.avatar_url,
+        bio: data.bio,
+        handicap: data.handicap ? parseFloat(data.handicap) : undefined,
+        createdAt: data.created_at ? new Date(data.created_at) : undefined,
+        updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
       } as UserProfile;
     } catch (error) {
       console.error('Error in getProfile:', error);
@@ -71,16 +86,17 @@ export const SupabaseStorageService = {
       }
 
       // Don't save email to profiles table - it's stored in auth.users
+      // Map UserProfile fields to database column names
       const { error } = await supabase
         .from('profiles')
         .upsert({
           user_id: user.id,
           username: profile.username,
-          display_name: profile.displayName,
-          bio: profile.bio,
-          handicap: profile.handicap,
-          phone_number: profile.phoneNumber,
-          avatar_url: profile.avatar,
+          display_name: profile.displayName || profile.username,
+          bio: profile.bio || null,
+          handicap: profile.handicap || null,
+          phone_number: profile.phoneNumber || null,
+          avatar_url: profile.avatar || null,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id'
@@ -121,7 +137,19 @@ export const SupabaseStorageService = {
       }
 
       console.log('Rounds fetched from Supabase:', data?.length);
-      return data as Round[];
+      
+      // Map database fields to Round interface
+      return data.map(round => ({
+        id: round.id,
+        courseId: round.course_id,
+        courseName: round.course_name,
+        courseLocation: round.course_location,
+        datePlayed: new Date(round.date_played),
+        score: round.score,
+        teeBox: round.tee_box,
+        yardage: round.yardage,
+        review: round.review,
+      })) as Round[];
     } catch (error) {
       console.error('Error in getRounds:', error);
       return [];
@@ -230,7 +258,25 @@ export const SupabaseStorageService = {
       }
 
       console.log('Ratings fetched from Supabase:', data?.length);
-      return data as CourseRating[];
+      
+      // Map database fields to CourseRating interface
+      return data.map(rating => ({
+        id: rating.id,
+        userId: rating.user_id,
+        courseId: rating.course_id,
+        courseName: rating.course_name,
+        courseLocation: rating.course_location,
+        playAgainResponse: rating.play_again_response,
+        comparisonWins: rating.comparison_wins,
+        comparisonLosses: rating.comparison_losses,
+        comparedCourseIds: rating.compared_course_ids || [],
+        rankPosition: rating.rank_position,
+        totalCourses: rating.total_courses,
+        finalScore: rating.final_score ? parseFloat(rating.final_score) : undefined,
+        playCount: rating.play_count,
+        createdAt: rating.created_at ? new Date(rating.created_at) : undefined,
+        updatedAt: rating.updated_at ? new Date(rating.updated_at) : undefined,
+      })) as CourseRating[];
     } catch (error) {
       console.error('Error in getRatings:', error);
       return [];
@@ -291,7 +337,7 @@ export const SupabaseStorageService = {
         .from('feed_events')
         .select(`
           *,
-          profiles:user_id (username, display_name, avatar_url)
+          profiles!feed_events_user_id_fkey (username, display_name, avatar_url)
         `)
         .order('created_at', { ascending: false })
         .range(offset, offset + limit - 1);
@@ -302,7 +348,29 @@ export const SupabaseStorageService = {
       }
 
       console.log('Feed events fetched from Supabase:', data?.length);
-      return data as FeedEvent[];
+      
+      // Map database fields to FeedEvent interface
+      return data.map(event => {
+        const profile = Array.isArray(event.profiles) ? event.profiles[0] : event.profiles;
+        return {
+          id: event.id,
+          userId: event.user_id,
+          username: profile?.username || 'Unknown User',
+          displayName: profile?.display_name || profile?.username || 'Unknown User',
+          userAvatar: profile?.avatar_url,
+          type: event.event_type as FeedEventType,
+          timestamp: event.created_at ? new Date(event.created_at) : new Date(),
+          courseId: event.course_id,
+          courseName: event.course_name,
+          courseLocation: event.course_location,
+          rating: event.rating ? parseFloat(event.rating) : undefined,
+          score: event.score,
+          photo: event.photo_url,
+          comment: event.comment,
+          likes: [], // TODO: Implement likes tracking
+          comments: [], // Comments are fetched separately
+        };
+      }) as FeedEvent[];
     } catch (error) {
       console.error('Error in getFeedEvents:', error);
       return [];
@@ -322,12 +390,13 @@ export const SupabaseStorageService = {
         .insert({
           id: event.id,
           user_id: user.id,
-          event_type: event.eventType,
+          event_type: event.type,
           course_id: event.courseId,
-          round_id: event.roundId,
+          course_name: event.courseName,
+          course_location: event.courseLocation,
           rating: event.rating,
           score: event.score,
-          photo_url: event.photoUrl,
+          photo_url: event.photo,
           comment: event.comment,
           likes_count: 0,
           comments_count: 0,
@@ -483,7 +552,18 @@ export const SupabaseStorageService = {
       }
 
       console.log('Badges fetched from Supabase:', data?.length);
-      return data as Badge[];
+      
+      // Map database fields to Badge interface
+      return data.map(badge => ({
+        id: badge.id,
+        userId: badge.user_id,
+        badgeId: badge.badge_id,
+        name: badge.badge_name,
+        description: badge.badge_description,
+        icon: badge.badge_icon,
+        earned: !!badge.earned_at,
+        earnedAt: badge.earned_at ? new Date(badge.earned_at) : undefined,
+      })) as Badge[];
     } catch (error) {
       console.error('Error in getBadges:', error);
       return [];

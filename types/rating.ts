@@ -7,23 +7,26 @@ export interface CourseRating {
   userId?: string;
   
   // Step 1: Play Again Response
-  playAgainResponse: 'definitely' | 'maybe' | 'no';
+  playAgainResponse?: 'definitely' | 'maybe' | 'no'; // play_again_response in database
   
   // Step 2: Comparison Results
-  comparisonWins: number;
-  comparisonLosses: number;
-  comparedCourseIds: string[];
+  comparisonWins?: number; // comparison_wins in database
+  comparisonLosses?: number; // comparison_losses in database
+  comparedCourseIds?: string[]; // compared_course_ids in database
   
   // Step 3: Ranking Position
-  rankPosition: number; // Position in user's list (0-based)
-  totalCourses: number; // Total courses at time of rating
+  rankPosition?: number; // rank_position in database - Position in user's list (0-based)
+  totalCourses?: number; // total_courses in database - Total courses at time of rating
   
   // Step 4: Final Score
-  finalScore: number; // 1-10 score
+  finalScore?: number; // final_score in database - 1-10 score
+  
+  // Play count
+  playCount?: number; // play_count in database - Number of times played
   
   // Metadata
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date; // created_at in database
+  updatedAt?: Date; // updated_at in database
 }
 
 export interface RatingTrigger {

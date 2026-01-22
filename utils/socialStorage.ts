@@ -188,7 +188,7 @@ export const SocialStorageService = {
 
   async saveFeedEvent(event: FeedEvent): Promise<void> {
     try {
-      console.log('Saving feed event to Supabase:', event.eventType);
+      console.log('Saving feed event to Supabase:', event.type);
       await SupabaseStorageService.createFeedEvent(event);
     } catch (error) {
       console.error('Error saving feed event:', error);
@@ -200,7 +200,7 @@ export const SocialStorageService = {
     try {
       console.log('Updating feed event in Supabase:', eventId);
       // For likes, use the increment function
-      if (updatedEvent.likesCount) {
+      if (updatedEvent.likes && updatedEvent.likes.length > 0) {
         await SupabaseStorageService.likeFeedEvent(eventId);
       }
     } catch (error) {
