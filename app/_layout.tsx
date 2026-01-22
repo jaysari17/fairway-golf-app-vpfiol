@@ -15,6 +15,7 @@ import {
 } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { WidgetProvider } from "@/contexts/WidgetContext";
+import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
 import { StorageService } from "@/utils/storage";
 
 SplashScreen.preventAutoHideAsync();
@@ -88,49 +89,79 @@ export default function RootLayout() {
       <ThemeProvider
         value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
       >
-        <WidgetProvider>
-          <GestureHandlerRootView>
-            <Stack>
-              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-              <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
-              <Stack.Screen name="contact-sync" options={{ headerShown: false }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen
-                name="modal"
-                options={{
-                  presentation: "modal",
-                  title: "Log Round",
-                }}
-              />
-              <Stack.Screen
-                name="rating-flow"
-                options={{
-                  presentation: "modal",
-                  title: "Rate Course",
-                  headerShown: false,
-                }}
-              />
-              <Stack.Screen
-                name="formsheet"
-                options={{
-                  presentation: "formSheet",
-                  title: "Course Details",
-                  sheetGrabberVisible: true,
-                  sheetAllowedDetents: [0.5, 0.8, 1.0],
-                  sheetCornerRadius: 20,
-                }}
-              />
-              <Stack.Screen
-                name="transparent-modal"
-                options={{
-                  presentation: "transparentModal",
-                  headerShown: false,
-                }}
-              />
-            </Stack>
-            <SystemBars style={"auto"} />
-          </GestureHandlerRootView>
-        </WidgetProvider>
+        <SupabaseAuthProvider>
+          <WidgetProvider>
+            <GestureHandlerRootView>
+              <Stack>
+                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+                <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
+                <Stack.Screen name="contact-sync" options={{ headerShown: false }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen
+                  name="modal"
+                  options={{
+                    presentation: "modal",
+                    title: "Log Round",
+                  }}
+                />
+                <Stack.Screen
+                  name="rating-flow"
+                  options={{
+                    presentation: "modal",
+                    title: "Rate Course",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="formsheet"
+                  options={{
+                    presentation: "formSheet",
+                    title: "Course Details",
+                    sheetGrabberVisible: true,
+                    sheetAllowedDetents: [0.5, 0.8, 1.0],
+                    sheetCornerRadius: 20,
+                  }}
+                />
+                <Stack.Screen
+                  name="transparent-modal"
+                  options={{
+                    presentation: "transparentModal",
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
+                  name="comment-modal"
+                  options={{
+                    presentation: "modal",
+                    title: "Comments",
+                  }}
+                />
+                <Stack.Screen
+                  name="user-courses"
+                  options={{
+                    presentation: "modal",
+                    title: "Courses Played",
+                  }}
+                />
+                <Stack.Screen
+                  name="user-followers"
+                  options={{
+                    presentation: "modal",
+                    title: "Followers",
+                  }}
+                />
+                <Stack.Screen
+                  name="user-following"
+                  options={{
+                    presentation: "modal",
+                    title: "Following",
+                  }}
+                />
+              </Stack>
+              <SystemBars style={"auto"} />
+            </GestureHandlerRootView>
+          </WidgetProvider>
+        </SupabaseAuthProvider>
       </ThemeProvider>
     </>
   );
