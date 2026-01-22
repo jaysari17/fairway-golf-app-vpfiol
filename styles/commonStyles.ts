@@ -2,23 +2,23 @@
 import { StyleSheet } from 'react-native';
 
 export const colors = {
-  // Light mode colors
-  background: '#F8F8FF',
-  text: '#333333',
-  textSecondary: '#666666',
-  primary: '#57C8A1',
-  secondary: '#45A088',
-  accent: '#228B22',
-  card: '#FFFFFF',
-  highlight: '#70E0C1',
-  border: '#E0E0E0',
+  // Light mode colors - Lighter mint green and white minimalist design
+  background: '#FFFFFF',
+  text: '#1A1A1A',
+  textSecondary: '#6B7280',
+  primary: '#7FE5C8',
+  secondary: '#5DD4B4',
+  accent: '#3DBFA0',
+  card: '#FAFAFA',
+  highlight: '#A0F0D8',
+  border: '#E5E7EB',
   
   // Dark mode colors (used dynamically via theme)
-  darkBackground: '#1C1C1E',
+  darkBackground: '#0F0F0F',
   darkText: '#FFFFFF',
-  darkTextSecondary: '#98989D',
-  darkCard: '#2C2C2E',
-  darkBorder: '#38383A',
+  darkTextSecondary: '#9CA3AF',
+  darkCard: '#1A1A1A',
+  darkBorder: '#2D2D2D',
 };
 
 export const buttonStyles = StyleSheet.create({
@@ -29,7 +29,7 @@ export const buttonStyles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
+    boxShadow: '0px 2px 8px rgba(127, 229, 200, 0.3)',
     elevation: 3,
   },
   primaryButtonText: {
@@ -110,7 +110,7 @@ export const commonStyles = StyleSheet.create({
     padding: 16,
     marginVertical: 8,
     width: '100%',
-    boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.08)',
+    boxShadow: '0px 2px 12px rgba(0, 0, 0, 0.04)',
     elevation: 2,
   },
   cardLarge: {
@@ -119,7 +119,7 @@ export const commonStyles = StyleSheet.create({
     padding: 20,
     marginVertical: 12,
     width: '100%',
-    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.1)',
+    boxShadow: '0px 4px 16px rgba(0, 0, 0, 0.06)',
     elevation: 3,
   },
   input: {

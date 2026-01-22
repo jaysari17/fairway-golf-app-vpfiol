@@ -13,8 +13,10 @@ import { RatingStorageService } from '@/utils/ratingStorage';
 import { StorageService } from '@/utils/storage';
 import { RatingAlgorithm } from '@/utils/ratingAlgorithm';
 import { AppStoreReviewService } from '@/utils/appStoreReview';
+import { SocialStorageService } from '@/utils/socialStorage';
 import { CourseRating } from '@/types/rating';
 import { Round } from '@/types/golf';
+import { FeedEvent } from '@/types/social';
 import * as Haptics from 'expo-haptics';
 
 type RatingStep = 'play-again' | 'comparison' | 'drag-rank' | 'confirmation';
@@ -108,17 +110,16 @@ export default function RatingFlowScreen() {
 
   useEffect(() => {
     loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadData]);
 
   useEffect(() => {
     if (currentStep === 'comparison' && comparisonCourses.length > 0) {
       loadCurrentComparisonCourse();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentStep, comparisonCourses.length]);
+  }, [currentStep, comparisonCourses.length, loadCurrentComparisonCourse]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
+    console.log('User selected play again response:', response);
     setPlayAgainResponse(response);
     
     if (comparisonCourses.length > 0) {
@@ -129,6 +130,7 @@ export default function RatingFlowScreen() {
   };
 
   const handleComparisonSelect = async (selectedCourseId: string) => {
+    console.log('User compared courses, selected:', selectedCourseId);
     if (selectedCourseId === courseId) {
       setComparisonWins(prev => prev + 1);
     } else {
@@ -145,6 +147,7 @@ export default function RatingFlowScreen() {
   };
 
   const handleRankPlacement = async (position: number) => {
+    console.log('User placed course at position:', position);
     setRankPosition(position);
     
     const neighborRatings: { above?: number; below?: number } = {};
@@ -171,6 +174,8 @@ export default function RatingFlowScreen() {
 
   const handleComplete = async () => {
     try {
+      console.log('User completed rating for:', courseName);
+      
       // Save the rating
       const rating: CourseRating = {
         id: Date.now().toString(),
@@ -197,11 +202,14 @@ export default function RatingFlowScreen() {
         courseName,
         courseLocation,
         date: new Date(),
-        rating: Math.round(finalScore * 10), // Convert 1-10 to 1-100 for consistency
+        rating: Math.round(finalScore * 10),
       };
       
       await StorageService.saveRound(round);
       await RatingStorageService.completeTrigger(courseId);
+      
+      // Post to social feed
+      await postToSocialFeed(rating);
       
       await triggerAppStoreReview();
       
@@ -209,7 +217,7 @@ export default function RatingFlowScreen() {
       
       Alert.alert(
         'Success! 🎉',
-        `${courseName} has been added to your Fairway list with a rating of ${finalScore.toFixed(1)}/10`,
+        `${courseName} has been added to your Fairway list with a rating of ${finalScore.toFixed(1)}/10 and shared with your friends!`,
         [
           {
             text: 'OK',
@@ -220,6 +228,35 @@ export default function RatingFlowScreen() {
     } catch (error) {
       console.error('Error saving rating:', error);
       Alert.alert('Error', 'Failed to save rating');
+    }
+  };
+
+  const postToSocialFeed = async (rating: CourseRating) => {
+    try {
+      console.log('Posting rating to social feed');
+      const currentUserId = await SocialStorageService.getCurrentUserId();
+      const profile = await StorageService.getProfile();
+      
+      const feedEvent: FeedEvent = {
+        id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        userId: currentUserId,
+        username: profile?.username || 'You',
+        displayName: profile?.displayName || profile?.username || 'You',
+        userAvatar: profile?.avatar,
+        type: 'course_rated',
+        timestamp: new Date(),
+        courseId: rating.courseId,
+        courseName: rating.courseName,
+        courseLocation: rating.courseLocation,
+        rating: Math.round(rating.finalScore * 10),
+        likes: [],
+        comments: [],
+      };
+      
+      await SocialStorageService.saveFeedEvent(feedEvent);
+      console.log('Successfully posted to social feed');
+    } catch (error) {
+      console.error('Error posting to social feed:', error);
     }
   };
 

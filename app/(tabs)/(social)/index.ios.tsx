@@ -73,13 +73,18 @@ export default function SocialFeedScreen() {
   }, [loading, rounds, feedEvents.length, currentUserId, refresh]);
 
   const onRefresh = async () => {
+    console.log('User refreshing social feed');
     setRefreshing(true);
     await refresh();
     setRefreshing(false);
   };
 
   const handleComment = (eventId: string) => {
-    Alert.alert('Coming Soon', 'Comments feature will be available soon!');
+    console.log('User tapped comment button for event:', eventId);
+    router.push({
+      pathname: '/comment-modal',
+      params: { eventId },
+    });
   };
 
   const pendingRequests = friendRequests.filter(
@@ -174,7 +179,7 @@ export default function SocialFeedScreen() {
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
               Connect with Friends
             </Text>
-            <Text style={[styles.emptyText, { color: theme.dark ? '#98989D' : '#666' }]}>
+            <Text style={[styles.emptyText, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
               Add friends to see their golf activity, compare courses, and share your journey
             </Text>
             <TouchableOpacity
@@ -197,7 +202,7 @@ export default function SocialFeedScreen() {
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
               No Activity Yet
             </Text>
-            <Text style={[styles.emptyText, { color: theme.dark ? '#98989D' : '#666' }]}>
+            <Text style={[styles.emptyText, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
               Your friends haven&apos;t logged any rounds yet. Be the first to share your golf activity!
             </Text>
             <TouchableOpacity
@@ -325,7 +330,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
-    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
+    boxShadow: '0px 2px 8px rgba(127, 229, 200, 0.3)',
     elevation: 3,
   },
   primaryButtonText: {
