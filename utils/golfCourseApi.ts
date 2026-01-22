@@ -1,12 +1,8 @@
 
 import { GolfCourse } from '@/types/golf';
 
-// Golf Course API Configuration
-// Documentation: https://rapidapi.com/apininjas/api/golf-course-api
-const GOLF_COURSE_API_BASE_URL = 'https://golf-course-api.p.rapidapi.com/courses';
-
-// Your RapidAPI key for Golf Course API
-const API_KEY = 'U2RVDJNGLFSNE5B2MAOAZGX2SM';
+// Backend API base URL - will be set by the backend integration
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface GolfCourseApiResponse {
   id?: number;
@@ -25,7 +21,7 @@ export interface GolfCourseApiResponse {
 }
 
 /**
- * Search for golf courses using the Golf Course API (RapidAPI)
+ * Search for golf courses worldwide using the backend API
  * @param query - Search query (course name, city, state, etc.)
  * @param limit - Maximum number of results to return (default: 20)
  * @returns Array of golf courses matching the search query
@@ -35,58 +31,38 @@ export async function searchGolfCourses(
   limit: number = 20
 ): Promise<GolfCourse[]> {
   if (!query || query.trim().length === 0) {
-    console.log('Golf Course API: Empty search query');
-    return [];
-  }
-
-  if (!API_KEY) {
-    console.warn('Golf Course API key not configured. Using sample data only.');
+    console.log('Golf Course Search: Empty search query');
     return [];
   }
 
   try {
-    console.log('Golf Course API: Searching for:', query);
+    console.log('Golf Course Search: Searching for:', query);
     
-    // RapidAPI uses a different URL structure
-    const url = `${GOLF_COURSE_API_BASE_URL}?name=${encodeURIComponent(query)}`;
+    // Call backend endpoint for golf course search
+    const url = `${API_BASE_URL}/api/golf-courses/search?query=${encodeURIComponent(query)}&limit=${limit}`;
     
-    console.log('Golf Course API: Request URL:', url);
+    console.log('Golf Course Search: Request URL:', url);
 
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'golf-course-api.p.rapidapi.com',
+        'Content-Type': 'application/json',
       },
     });
 
-    console.log('Golf Course API: Response status:', response.status);
+    console.log('Golf Course Search: Response status:', response.status);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Golf Course API error:', response.status, response.statusText, errorText);
+      console.error('Golf Course Search error:', response.status, response.statusText, errorText);
       return [];
     }
 
-    const data: GolfCourseApiResponse[] = await response.json();
-    console.log('Golf Course API: Found', data.length, 'courses');
+    const data = await response.json();
+    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses');
 
-    // Transform API response to our GolfCourse type
-    const courses = data.slice(0, limit).map((course, index) => ({
-      id: course.id ? `api-${course.id}` : `api-search-${Date.now()}-${index}`,
-      name: course.name,
-      location: `${course.city}, ${course.state_or_province}`,
-      city: course.city,
-      state: course.state_or_province,
-      country: course.country,
-      type: mapCourseType(course.course_type),
-      holes: course.holes,
-      par: course.par,
-      yardage: course.yardage,
-    }));
-
-    console.log('Golf Course API: Returning', courses.length, 'transformed courses');
-    return courses;
+    // The backend returns courses in our GolfCourse format
+    return data.courses || [];
   } catch (error) {
     console.error('Error searching golf courses:', error);
     return [];
@@ -95,50 +71,29 @@ export async function searchGolfCourses(
 
 /**
  * Get a specific golf course by ID
- * @param courseId - The course ID from Golf Course API
+ * @param courseId - The course ID
  * @returns Golf course details or null if not found
  */
 export async function getGolfCourseById(courseId: string): Promise<GolfCourse | null> {
-  if (!API_KEY) {
-    console.warn('Golf Course API key not configured.');
-    return null;
-  }
-
-  // Extract numeric ID from our prefixed ID format
-  const numericId = courseId.replace('api-', '').split('-')[0];
-
   try {
-    console.log('Golf Course API: Fetching course by ID:', numericId);
+    console.log('Golf Course Search: Fetching course by ID:', courseId);
     
-    const url = `${GOLF_COURSE_API_BASE_URL}/${numericId}`;
+    const url = `${API_BASE_URL}/api/golf-courses/${courseId}`;
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'golf-course-api.p.rapidapi.com',
+        'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      console.error('Golf Course API error:', response.status, response.statusText);
+      console.error('Golf Course Search error:', response.status, response.statusText);
       return null;
     }
 
-    const course: GolfCourseApiResponse = await response.json();
-
-    return {
-      id: `api-${course.id || numericId}`,
-      name: course.name,
-      location: `${course.city}, ${course.state_or_province}`,
-      city: course.city,
-      state: course.state_or_province,
-      country: course.country,
-      type: mapCourseType(course.course_type),
-      holes: course.holes,
-      par: course.par,
-      yardage: course.yardage,
-    };
+    const data = await response.json();
+    return data.course || null;
   } catch (error) {
     console.error('Error fetching golf course:', error);
     return null;
@@ -156,48 +111,31 @@ export async function searchGolfCoursesByState(
   limit: number = 20
 ): Promise<GolfCourse[]> {
   if (!state || state.trim().length === 0) {
-    console.log('Golf Course API: Empty state query');
-    return [];
-  }
-
-  if (!API_KEY) {
-    console.warn('Golf Course API key not configured.');
+    console.log('Golf Course Search: Empty state query');
     return [];
   }
 
   try {
-    console.log('Golf Course API: Searching by state:', state);
+    console.log('Golf Course Search: Searching by state:', state);
     
-    const url = `${GOLF_COURSE_API_BASE_URL}?state=${encodeURIComponent(state)}`;
+    const url = `${API_BASE_URL}/api/golf-courses/search?state=${encodeURIComponent(state)}&limit=${limit}`;
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'golf-course-api.p.rapidapi.com',
+        'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      console.error('Golf Course API error:', response.status, response.statusText);
+      console.error('Golf Course Search error:', response.status, response.statusText);
       return [];
     }
 
-    const data: GolfCourseApiResponse[] = await response.json();
-    console.log('Golf Course API: Found', data.length, 'courses in', state);
+    const data = await response.json();
+    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses in', state);
 
-    return data.slice(0, limit).map((course, index) => ({
-      id: course.id ? `api-${course.id}` : `api-state-${Date.now()}-${index}`,
-      name: course.name,
-      location: `${course.city}, ${course.state_or_province}`,
-      city: course.city,
-      state: course.state_or_province,
-      country: course.country,
-      type: mapCourseType(course.course_type),
-      holes: course.holes,
-      par: course.par,
-      yardage: course.yardage,
-    }));
+    return data.courses || [];
   } catch (error) {
     console.error('Error searching golf courses by state:', error);
     return [];
@@ -217,19 +155,14 @@ export async function searchGolfCoursesByCity(
   limit: number = 20
 ): Promise<GolfCourse[]> {
   if (!city || city.trim().length === 0) {
-    console.log('Golf Course API: Empty city query');
-    return [];
-  }
-
-  if (!API_KEY) {
-    console.warn('Golf Course API key not configured.');
+    console.log('Golf Course Search: Empty city query');
     return [];
   }
 
   try {
-    console.log('Golf Course API: Searching by city:', city, state ? `in ${state}` : '');
+    console.log('Golf Course Search: Searching by city:', city, state ? `in ${state}` : '');
     
-    let url = `${GOLF_COURSE_API_BASE_URL}?city=${encodeURIComponent(city)}`;
+    let url = `${API_BASE_URL}/api/golf-courses/search?city=${encodeURIComponent(city)}&limit=${limit}`;
     if (state) {
       url += `&state=${encodeURIComponent(state)}`;
     }
@@ -237,49 +170,21 @@ export async function searchGolfCoursesByCity(
     const response = await fetch(url, {
       method: 'GET',
       headers: {
-        'X-RapidAPI-Key': API_KEY,
-        'X-RapidAPI-Host': 'golf-course-api.p.rapidapi.com',
+        'Content-Type': 'application/json',
       },
     });
 
     if (!response.ok) {
-      console.error('Golf Course API error:', response.status, response.statusText);
+      console.error('Golf Course Search error:', response.status, response.statusText);
       return [];
     }
 
-    const data: GolfCourseApiResponse[] = await response.json();
-    console.log('Golf Course API: Found', data.length, 'courses in', city);
+    const data = await response.json();
+    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses in', city);
 
-    return data.slice(0, limit).map((course, index) => ({
-      id: course.id ? `api-${course.id}` : `api-city-${Date.now()}-${index}`,
-      name: course.name,
-      location: `${course.city}, ${course.state_or_province}`,
-      city: course.city,
-      state: course.state_or_province,
-      country: course.country,
-      type: mapCourseType(course.course_type),
-      holes: course.holes,
-      par: course.par,
-      yardage: course.yardage,
-    }));
+    return data.courses || [];
   } catch (error) {
     console.error('Error searching golf courses by city:', error);
     return [];
   }
-}
-
-/**
- * Map course type from API to our internal type
- */
-function mapCourseType(apiType?: string): 'parkland' | 'links' | 'desert' | 'mountain' | 'other' {
-  if (!apiType) return 'other';
-  
-  const type = apiType.toLowerCase();
-  
-  if (type.includes('links')) return 'links';
-  if (type.includes('parkland') || type.includes('park')) return 'parkland';
-  if (type.includes('desert')) return 'desert';
-  if (type.includes('mountain')) return 'mountain';
-  
-  return 'other';
 }

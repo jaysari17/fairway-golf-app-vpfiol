@@ -31,6 +31,7 @@ export default function SelectCourseModal() {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [backendAvailable, setBackendAvailable] = useState(true);
 
   // Debounced search effect
   useEffect(() => {
@@ -56,14 +57,20 @@ export default function SelectCourseModal() {
     try {
       const results = await searchGolfCourses(query, 50);
       console.log('Search results received:', results.length, 'courses');
-      setSearchResults(results);
       
       if (results.length === 0) {
-        console.log('No courses found for query:', query);
+        // Check if backend is available
+        setBackendAvailable(false);
+        console.log('No courses found - backend may not be connected yet');
+      } else {
+        setBackendAvailable(true);
       }
+      
+      setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
+      setBackendAvailable(false);
     } finally {
       setIsSearching(false);
     }
@@ -110,6 +117,7 @@ export default function SelectCourseModal() {
 
   const showingApiResults = showResults && searchQuery.trim().length >= 2 && searchResults.length > 0;
   const showingSampleCourses = !showResults || searchQuery.trim().length < 2;
+  const showBackendWarning = hasSearched && !backendAvailable && searchResults.length === 0;
 
   return (
     <SafeAreaView 
@@ -158,6 +166,7 @@ export default function SelectCourseModal() {
                   setSearchResults([]);
                   setShowResults(false);
                   setHasSearched(false);
+                  setBackendAvailable(true);
                 }}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -180,7 +189,7 @@ export default function SelectCourseModal() {
                 color={colors.primary}
               />
               <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
-                Showing {searchResults.length} real courses from API
+                Showing {searchResults.length} real courses from worldwide database
               </Text>
             </View>
           )}
@@ -194,7 +203,21 @@ export default function SelectCourseModal() {
                 color={theme.dark ? '#98989D' : '#666'}
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses (search to find more)
+                Popular courses (search to find more worldwide)
+              </Text>
+            </View>
+          )}
+
+          {showBackendWarning && (
+            <View style={[styles.warningBadge, { backgroundColor: theme.dark ? '#2C2C2E' : '#FFF3CD' }]}>
+              <IconSymbol
+                ios_icon_name="info.circle"
+                android_material_icon_name="info"
+                size={16}
+                color={theme.dark ? '#FFA500' : '#856404'}
+              />
+              <Text style={[styles.warningText, { color: theme.dark ? '#FFA500' : '#856404' }]}>
+                Worldwide course search is being set up. For now, you can select from popular courses below or try searching again in a moment.
               </Text>
             </View>
           )}
@@ -230,17 +253,31 @@ export default function SelectCourseModal() {
               <Text style={[styles.emptyHint, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Examples: &quot;Pebble Beach&quot;, &quot;Augusta&quot;, &quot;St Andrews&quot;
               </Text>
+              <TouchableOpacity
+                style={[styles.sampleCoursesButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  setSearchQuery('');
+                  setShowResults(false);
+                  setHasSearched(false);
+                }}
+              >
+                <Text style={styles.sampleCoursesButtonText}>
+                  View Popular Courses
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.courseGrid}>
               {displayedCourses.map((course, index) => {
                 const isApiCourse = course.id.startsWith('api-');
+                const isSelected = selectedCourse?.id === course.id;
+                
                 return (
                   <TouchableOpacity
                     key={`${course.id}-${index}`}
                     style={[
                       styles.courseCard,
-                      selectedCourse?.id === course.id && { 
+                      isSelected && { 
                         backgroundColor: colors.primary,
                         borderColor: colors.primary,
                       },
@@ -259,11 +296,11 @@ export default function SelectCourseModal() {
                             ios_icon_name="globe"
                             android_material_icon_name="public"
                             size={12}
-                            color={selectedCourse?.id === course.id ? '#FFFFFF' : colors.primary}
+                            color={isSelected ? '#FFFFFF' : colors.primary}
                           />
                           <Text style={[
                             styles.apiBadgeText,
-                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : colors.primary }
+                            { color: isSelected ? '#FFFFFF' : colors.primary }
                           ]}>
                             Real Course
                           </Text>
@@ -272,7 +309,7 @@ export default function SelectCourseModal() {
                       <Text
                         style={[
                           styles.courseName,
-                          { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.colors.text },
+                          { color: isSelected ? '#FFFFFF' : theme.colors.text },
                         ]}
                         numberOfLines={2}
                       >
@@ -281,7 +318,7 @@ export default function SelectCourseModal() {
                       <Text
                         style={[
                           styles.courseLocation,
-                          { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                          { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
                         ]}
                         numberOfLines={1}
                       >
@@ -291,7 +328,7 @@ export default function SelectCourseModal() {
                         <Text
                           style={[
                             styles.courseCountry,
-                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                            { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
                           ]}
                         >
                           {course.country}
@@ -301,13 +338,13 @@ export default function SelectCourseModal() {
                         <Text
                           style={[
                             styles.courseDetails,
-                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                            { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
                           ]}
                         >
                           {course.holes} holes • Par {course.par}
                         </Text>
                       )}
-                      {selectedCourse?.id === course.id && (
+                      {isSelected && (
                         <View style={styles.checkmark}>
                           <IconSymbol
                             ios_icon_name="checkmark.circle.fill"
@@ -401,6 +438,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  warningBadge: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   scrollView: {
     flex: 1,
   },
@@ -487,6 +537,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 8,
+  },
+  sampleCoursesButton: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  sampleCoursesButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: 20,
