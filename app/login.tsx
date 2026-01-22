@@ -11,6 +11,8 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -18,6 +20,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/styles/commonStyles';
 import { StorageService } from '@/utils/storage';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+
+// Helper to resolve image sources (handles both local require() and remote URLs)
+function resolveImageSource(source: string | number | ImageSourcePropType | undefined): ImageSourcePropType {
+  if (!source) return { uri: '' };
+  if (typeof source === 'string') return { uri: source };
+  return source as ImageSourcePropType;
+}
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -82,7 +91,11 @@ export default function LoginScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <Text style={styles.emoji}>⛳</Text>
+              <Image
+                source={resolveImageSource(require('@/assets/images/icon.png'))}
+                style={styles.logo}
+                resizeMode="contain"
+              />
               <Text style={styles.title}>Welcome Back</Text>
               <Text style={styles.subtitle}>
                 Sign in to continue your golf journey
@@ -168,8 +181,9 @@ const styles = StyleSheet.create({
     marginBottom: 48,
     alignItems: 'center',
   },
-  emoji: {
-    fontSize: 80,
+  logo: {
+    width: 120,
+    height: 120,
     marginBottom: 20,
   },
   title: {
