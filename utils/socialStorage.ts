@@ -1,46 +1,78 @@
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SupabaseStorageService } from './supabaseStorage';
 import { Friend, FriendRequest, FeedEvent, Notification, PrivacySettings } from '@/types/social';
+import { supabase } from './supabase';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// TODO: Backend Integration - This file uses AsyncStorage for local social data
-// Once backend is ready, replace these methods with API calls from utils/api.ts
-// Social features require real backend for multi-user functionality
+// Social storage service that uses Supabase for all social features
+// AsyncStorage only for privacy settings (local preference)
 
 const SOCIAL_STORAGE_KEYS = {
-  FRIENDS: '@fairway_friends',
-  FRIEND_REQUESTS: '@fairway_friend_requests',
-  FEED_EVENTS: '@fairway_feed_events',
-  NOTIFICATIONS: '@fairway_notifications',
   PRIVACY_SETTINGS: '@fairway_privacy_settings',
-  CURRENT_USER_ID: '@fairway_current_user_id',
 };
 
 export const SocialStorageService = {
-  // Current User
+  // Current User - Use Supabase Auth
   async getCurrentUserId(): Promise<string> {
     try {
-      // TODO: Backend Integration - Get from auth context after login
-      // This should come from JWT token or API response
-      let userId = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.CURRENT_USER_ID);
-      if (!userId) {
-        userId = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.CURRENT_USER_ID, userId);
-        console.log('Generated temporary user ID:', userId);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user');
+        return '';
       }
-      return userId;
+      return user.id;
     } catch (error) {
       console.error('Error getting current user ID:', error);
-      return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      return '';
     }
   },
 
-  // Friends
+  // Friends - Use Supabase (followers/following)
   async getFriends(): Promise<Friend[]> {
     try {
-      // TODO: Backend Integration - GET /api/social/following/:userId
-      // Friends are users you follow who also follow you back
-      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FRIENDS);
-      return data ? JSON.parse(data) : [];
+      console.log('Fetching friends from Supabase');
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
+      // Get users who follow you AND you follow back (mutual follows = friends)
+      const { data: following, error: followingError } = await supabase
+        .from('followers')
+        .select(`
+          following_id,
+          profiles:following_id (user_id, username, display_name, avatar_url)
+        `)
+        .eq('follower_id', userId);
+
+      if (followingError) {
+        console.error('Error fetching following:', followingError);
+        return [];
+      }
+
+      const { data: followers, error: followersError } = await supabase
+        .from('followers')
+        .select('follower_id')
+        .eq('following_id', userId);
+
+      if (followersError) {
+        console.error('Error fetching followers:', followersError);
+        return [];
+      }
+
+      const followerIds = new Set(followers?.map(f => f.follower_id) || []);
+      
+      // Filter to only mutual follows
+      const friends = following
+        ?.filter(f => followerIds.has(f.following_id))
+        .map(f => ({
+          id: f.profiles.user_id,
+          username: f.profiles.username,
+          displayName: f.profiles.display_name,
+          avatar: f.profiles.avatar_url,
+          mutualFriends: 0, // TODO: Calculate mutual friends
+        })) || [];
+
+      console.log('Friends fetched from Supabase:', friends.length);
+      return friends;
     } catch (error) {
       console.error('Error getting friends:', error);
       return [];
@@ -49,17 +81,8 @@ export const SocialStorageService = {
 
   async saveFriend(friend: Friend): Promise<void> {
     try {
-      // TODO: Backend Integration - POST /api/social/follow/:userId
-      // Backend will handle mutual follow relationships
-      const friends = await this.getFriends();
-      const existingIndex = friends.findIndex(f => f.id === friend.id);
-      if (existingIndex >= 0) {
-        friends[existingIndex] = friend;
-      } else {
-        friends.push(friend);
-      }
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIENDS, JSON.stringify(friends));
-      console.log('Friend saved locally:', friend.username);
+      console.log('Following user in Supabase:', friend.username);
+      await SupabaseStorageService.followUser(friend.id);
     } catch (error) {
       console.error('Error saving friend:', error);
       throw error;
@@ -68,24 +91,49 @@ export const SocialStorageService = {
 
   async removeFriend(friendId: string): Promise<void> {
     try {
-      // TODO: Backend Integration - DELETE /api/social/unfollow/:userId
-      const friends = await this.getFriends();
-      const filtered = friends.filter(f => f.id !== friendId);
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIENDS, JSON.stringify(filtered));
-      console.log('Friend removed locally:', friendId);
+      console.log('Unfollowing user in Supabase:', friendId);
+      await SupabaseStorageService.unfollowUser(friendId);
     } catch (error) {
       console.error('Error removing friend:', error);
       throw error;
     }
   },
 
-  // Friend Requests
+  // Friend Requests - Use Supabase
   async getFriendRequests(): Promise<FriendRequest[]> {
     try {
-      // TODO: Backend Integration - GET /api/social/friend-requests
-      // Returns both incoming and outgoing requests
-      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS);
-      return data ? JSON.parse(data) : [];
+      console.log('Fetching friend requests from Supabase');
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
+      const { data, error } = await supabase
+        .from('friend_requests')
+        .select(`
+          *,
+          from_profile:from_user_id (username, display_name, avatar_url),
+          to_profile:to_user_id (username, display_name, avatar_url)
+        `)
+        .or(`from_user_id.eq.${userId},to_user_id.eq.${userId}`)
+        .eq('status', 'pending');
+
+      if (error) {
+        console.error('Error fetching friend requests:', error);
+        return [];
+      }
+
+      const requests = data?.map(r => ({
+        id: r.id,
+        fromUserId: r.from_user_id,
+        toUserId: r.to_user_id,
+        fromUsername: r.from_profile.username,
+        fromDisplayName: r.from_profile.display_name,
+        fromAvatar: r.from_profile.avatar_url,
+        status: r.status as 'pending' | 'accepted' | 'rejected',
+        createdAt: new Date(r.created_at),
+      })) || [];
+
+      console.log('Friend requests fetched from Supabase:', requests.length);
+      return requests;
     } catch (error) {
       console.error('Error getting friend requests:', error);
       return [];
@@ -94,16 +142,17 @@ export const SocialStorageService = {
 
   async saveFriendRequest(request: FriendRequest): Promise<void> {
     try {
-      // TODO: Backend Integration - POST /api/social/friend-request/:userId
-      const requests = await this.getFriendRequests();
-      const existingIndex = requests.findIndex(r => r.id === request.id);
-      if (existingIndex >= 0) {
-        requests[existingIndex] = request;
-      } else {
-        requests.push(request);
-      }
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS, JSON.stringify(requests));
-      console.log('Friend request saved locally:', request.id);
+      console.log('Saving friend request to Supabase');
+      const { error } = await supabase
+        .from('friend_requests')
+        .insert({
+          from_user_id: request.fromUserId,
+          to_user_id: request.toUserId,
+          status: request.status,
+        });
+
+      if (error) throw error;
+      console.log('Friend request saved to Supabase');
     } catch (error) {
       console.error('Error saving friend request:', error);
       throw error;
@@ -112,24 +161,25 @@ export const SocialStorageService = {
 
   async removeFriendRequest(requestId: string): Promise<void> {
     try {
-      // TODO: Backend Integration - DELETE /api/social/friend-request/:requestId
-      const requests = await this.getFriendRequests();
-      const filtered = requests.filter(r => r.id !== requestId);
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS, JSON.stringify(filtered));
-      console.log('Friend request removed locally:', requestId);
+      console.log('Removing friend request from Supabase:', requestId);
+      const { error } = await supabase
+        .from('friend_requests')
+        .delete()
+        .eq('id', requestId);
+
+      if (error) throw error;
+      console.log('Friend request removed from Supabase');
     } catch (error) {
       console.error('Error removing friend request:', error);
       throw error;
     }
   },
 
-  // Feed Events
+  // Feed Events - Use Supabase
   async getFeedEvents(): Promise<FeedEvent[]> {
     try {
-      // TODO: Backend Integration - GET /api/social/feed
-      // Returns feed events from followed users and self
-      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS);
-      return data ? JSON.parse(data) : [];
+      console.log('Fetching feed events from Supabase');
+      return await SupabaseStorageService.getFeedEvents();
     } catch (error) {
       console.error('Error getting feed events:', error);
       return [];
@@ -138,14 +188,8 @@ export const SocialStorageService = {
 
   async saveFeedEvent(event: FeedEvent): Promise<void> {
     try {
-      // TODO: Backend Integration - POST /api/social/feed
-      // Backend will broadcast to followers' feeds
-      const events = await this.getFeedEvents();
-      events.unshift(event); // Add to beginning
-      // Keep only last 100 events
-      const trimmed = events.slice(0, 100);
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS, JSON.stringify(trimmed));
-      console.log('Feed event saved locally:', event.type);
+      console.log('Saving feed event to Supabase:', event.eventType);
+      await SupabaseStorageService.createFeedEvent(event);
     } catch (error) {
       console.error('Error saving feed event:', error);
       throw error;
@@ -154,14 +198,10 @@ export const SocialStorageService = {
 
   async updateFeedEvent(eventId: string, updatedEvent: FeedEvent): Promise<void> {
     try {
-      // TODO: Backend Integration - Likes: POST /api/social/feed/:eventId/like
-      // TODO: Backend Integration - Comments: POST /api/social/feed/:eventId/comment
-      const events = await this.getFeedEvents();
-      const index = events.findIndex(e => e.id === eventId);
-      if (index !== -1) {
-        events[index] = updatedEvent;
-        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.FEED_EVENTS, JSON.stringify(events));
-        console.log('Feed event updated locally:', eventId);
+      console.log('Updating feed event in Supabase:', eventId);
+      // For likes, use the increment function
+      if (updatedEvent.likesCount) {
+        await SupabaseStorageService.likeFeedEvent(eventId);
       }
     } catch (error) {
       console.error('Error updating feed event:', error);
@@ -169,12 +209,11 @@ export const SocialStorageService = {
     }
   },
 
-  // Notifications
+  // Notifications - TODO: Implement with Supabase
   async getNotifications(): Promise<Notification[]> {
     try {
-      // TODO: Backend Integration - GET /api/notifications
-      const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS);
-      return data ? JSON.parse(data) : [];
+      console.log('Notifications not yet implemented in Supabase');
+      return [];
     } catch (error) {
       console.error('Error getting notifications:', error);
       return [];
@@ -182,54 +221,20 @@ export const SocialStorageService = {
   },
 
   async saveNotification(notification: Notification): Promise<void> {
-    try {
-      // TODO: Backend Integration - Notifications created automatically by backend
-      // When someone follows, likes, comments, etc.
-      const notifications = await this.getNotifications();
-      notifications.unshift(notification);
-      // Keep only last 50 notifications
-      const trimmed = notifications.slice(0, 50);
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(trimmed));
-      console.log('Notification saved locally:', notification.type);
-    } catch (error) {
-      console.error('Error saving notification:', error);
-      throw error;
-    }
+    console.log('Notifications not yet implemented in Supabase');
   },
 
   async markNotificationAsRead(notificationId: string): Promise<void> {
-    try {
-      // TODO: Backend Integration - PUT /api/notifications/:notificationId/read
-      const notifications = await this.getNotifications();
-      const notification = notifications.find(n => n.id === notificationId);
-      if (notification) {
-        notification.read = true;
-        await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-        console.log('Notification marked read:', notificationId);
-      }
-    } catch (error) {
-      console.error('Error marking notification as read:', error);
-      throw error;
-    }
+    console.log('Notifications not yet implemented in Supabase');
   },
 
   async markAllNotificationsAsRead(): Promise<void> {
-    try {
-      // TODO: Backend Integration - PUT /api/notifications/read-all
-      const notifications = await this.getNotifications();
-      notifications.forEach(n => n.read = true);
-      await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifications));
-      console.log('All notifications marked read');
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      throw error;
-    }
+    console.log('Notifications not yet implemented in Supabase');
   },
 
-  // Privacy Settings
+  // Privacy Settings - Keep in AsyncStorage (local preference)
   async getPrivacySettings(): Promise<PrivacySettings> {
     try {
-      // TODO: Backend Integration - GET /api/privacy
       const data = await AsyncStorage.getItem(SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS);
       return data ? JSON.parse(data) : {
         accountVisibility: 'friends',
@@ -254,7 +259,6 @@ export const SocialStorageService = {
 
   async savePrivacySettings(settings: PrivacySettings): Promise<void> {
     try {
-      // TODO: Backend Integration - PUT /api/privacy
       await AsyncStorage.setItem(SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS, JSON.stringify(settings));
       console.log('Privacy settings saved locally');
     } catch (error) {
@@ -266,14 +270,8 @@ export const SocialStorageService = {
   // Clear all social data
   async clearAllSocialData(): Promise<void> {
     try {
-      await AsyncStorage.multiRemove([
-        SOCIAL_STORAGE_KEYS.FRIENDS,
-        SOCIAL_STORAGE_KEYS.FRIEND_REQUESTS,
-        SOCIAL_STORAGE_KEYS.FEED_EVENTS,
-        SOCIAL_STORAGE_KEYS.NOTIFICATIONS,
-        SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS,
-      ]);
-      console.log('All social data cleared locally');
+      await AsyncStorage.removeItem(SOCIAL_STORAGE_KEYS.PRIVACY_SETTINGS);
+      console.log('Local social data cleared (Supabase data remains)');
     } catch (error) {
       console.error('Error clearing social data:', error);
       throw error;

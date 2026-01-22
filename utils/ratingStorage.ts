@@ -1,25 +1,23 @@
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { SupabaseStorageService } from './supabaseStorage';
 import { CourseRating, RatingTrigger } from '@/types/rating';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// TODO: Backend Integration - This file uses AsyncStorage for local rating data
-// Once backend is ready, replace these methods with API calls from utils/api.ts
+// Rating storage service that uses Supabase for ratings
+// AsyncStorage for local triggers and session tracking
 
 const STORAGE_KEYS = {
-  RATINGS: '@fairway_ratings',
   RATING_TRIGGERS: '@fairway_rating_triggers',
   LAST_SESSION: '@fairway_last_session',
   APP_REVIEW_REQUESTED: '@fairway_app_review_requested',
 };
 
 export const RatingStorageService = {
-  // Ratings
-  async getRatings(): Promise<CourseRating[]> {
+  // Ratings - Use Supabase
+  async getRatings(userId?: string): Promise<CourseRating[]> {
     try {
-      // TODO: Backend Integration - GET /api/ratings
-      // Returns all ratings for the current user
-      const data = await AsyncStorage.getItem(STORAGE_KEYS.RATINGS);
-      return data ? JSON.parse(data) : [];
+      console.log('Fetching ratings from Supabase');
+      return await SupabaseStorageService.getRatings(userId);
     } catch (error) {
       console.error('Error getting ratings:', error);
       return [];
@@ -28,32 +26,18 @@ export const RatingStorageService = {
 
   async saveRating(rating: CourseRating): Promise<void> {
     try {
-      // TODO: Backend Integration - POST /api/ratings
-      // Body: { courseId, playAgainResponse, comparisonWins, comparisonLosses, comparedCourseIds, rankPosition, totalCourses, finalScore }
-      // Backend will also create a feed event automatically
-      const ratings = await this.getRatings();
-      const existingIndex = ratings.findIndex(r => r.courseId === rating.courseId);
-      
-      if (existingIndex !== -1) {
-        ratings[existingIndex] = rating;
-        console.log('Rating updated locally:', rating.courseName);
-      } else {
-        ratings.push(rating);
-        console.log('Rating saved locally:', rating.courseName);
-      }
-      
-      await AsyncStorage.setItem(STORAGE_KEYS.RATINGS, JSON.stringify(ratings));
+      console.log('Saving rating to Supabase:', rating.courseName);
+      await SupabaseStorageService.saveRating(rating);
     } catch (error) {
       console.error('Error saving rating:', error);
       throw error;
     }
   },
 
-  async getRatingForCourse(courseId: string): Promise<CourseRating | null> {
+  async getRatingForCourse(courseId: string, userId?: string): Promise<CourseRating | null> {
     try {
-      // TODO: Backend Integration - GET /api/ratings/course/:courseId
-      // Returns rating for specific course or null
-      const ratings = await this.getRatings();
+      console.log('Fetching rating for course from Supabase:', courseId);
+      const ratings = await SupabaseStorageService.getRatings(userId);
       return ratings.find(r => r.courseId === courseId) || null;
     } catch (error) {
       console.error('Error getting rating for course:', error);
@@ -61,11 +45,9 @@ export const RatingStorageService = {
     }
   },
 
-  // Rating Triggers
+  // Rating Triggers - Keep in AsyncStorage (local UX feature)
   async getTriggers(): Promise<RatingTrigger[]> {
     try {
-      // TODO: Backend Integration - Rating triggers might be handled server-side
-      // Or kept client-side for better UX
       const data = await AsyncStorage.getItem(STORAGE_KEYS.RATING_TRIGGERS);
       return data ? JSON.parse(data) : [];
     } catch (error) {
@@ -112,7 +94,7 @@ export const RatingStorageService = {
     }
   },
 
-  // Session tracking
+  // Session tracking - Keep in AsyncStorage
   async getLastSession(): Promise<Date | null> {
     try {
       const data = await AsyncStorage.getItem(STORAGE_KEYS.LAST_SESSION);
@@ -132,7 +114,7 @@ export const RatingStorageService = {
     }
   },
 
-  // App Review Tracking (legacy methods for backward compatibility)
+  // App Review Tracking - Keep in AsyncStorage
   async hasRequestedAppReview(): Promise<boolean> {
     try {
       const requested = await AsyncStorage.getItem(STORAGE_KEYS.APP_REVIEW_REQUESTED);
