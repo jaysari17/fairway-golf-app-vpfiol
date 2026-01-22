@@ -21,9 +21,13 @@ import { UserProfile } from '@/types/golf';
 import { colors } from '@/styles/commonStyles';
 import { availableBadges } from '@/data/badges';
 import * as ImagePicker from 'expo-image-picker';
+import { RatingStorageService } from '@/utils/ratingStorage';
+import { CourseRating } from '@/types/rating';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { profile, updateProfile } = useProfile();
   const { rounds } = useRounds();
   const { friends } = useSocial();
@@ -35,6 +39,7 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState('');
   const [handicap, setHandicap] = useState('');
   const [avatar, setAvatar] = useState<string | undefined>(undefined);
+  const [ratedCourses, setRatedCourses] = useState<CourseRating[]>([]);
 
   useEffect(() => {
     if (profile) {
@@ -53,6 +58,20 @@ export default function ProfileScreen() {
       setAvatar(undefined);
     }
   }, [profile]);
+
+  useEffect(() => {
+    loadRatedCourses();
+  }, []);
+
+  const loadRatedCourses = async () => {
+    try {
+      const ratings = await RatingStorageService.getRatings();
+      const sortedRatings = ratings.sort((a, b) => b.finalScore - a.finalScore);
+      setRatedCourses(sortedRatings);
+    } catch (error) {
+      console.error('Error loading rated courses:', error);
+    }
+  };
 
   const handlePickImage = async () => {
     console.log('User tapped change profile picture');
@@ -124,6 +143,11 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleSearchCourses = () => {
+    console.log('User tapped search courses button');
+    router.push('/modal');
+  };
+
   const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
   const averageRating = rounds.length > 0
     ? Math.round(rounds.reduce((sum, r) => sum + r.rating, 0) / rounds.length)
@@ -137,6 +161,13 @@ export default function ProfileScreen() {
   });
 
   const usernameInitial = username.charAt(0).toUpperCase();
+
+  const getScoreColor = (score: number) => {
+    if (score >= 8) return '#4CAF50';
+    if (score >= 6) return colors.primary;
+    if (score >= 4) return '#FF9800';
+    return '#F44336';
+  };
 
   return (
     <SafeAreaView 
@@ -350,6 +381,85 @@ export default function ProfileScreen() {
             <StatCard label="Avg Rating" value={averageRating} icon="⭐" />
             <StatCard label="Badges Earned" value={earnedBadges.length} icon="🏆" />
           </View>
+        </View>
+
+        <View style={styles.coursesSection}>
+          <View style={styles.coursesSectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>My Courses</Text>
+            <TouchableOpacity
+              style={[styles.searchButton, { backgroundColor: colors.primary }]}
+              onPress={handleSearchCourses}
+              activeOpacity={0.7}
+            >
+              <IconSymbol
+                ios_icon_name="magnifyingglass"
+                android_material_icon_name="search"
+                size={18}
+                color="#FFFFFF"
+              />
+              <Text style={styles.searchButtonText}>Search</Text>
+            </TouchableOpacity>
+          </View>
+
+          {ratedCourses.length === 0 ? (
+            <View style={[styles.emptyCoursesCard, { backgroundColor: theme.colors.card }]}>
+              <IconSymbol
+                ios_icon_name="flag.fill"
+                android_material_icon_name="flag"
+                size={48}
+                color={theme.dark ? '#666' : '#CCC'}
+              />
+              <Text style={[styles.emptyCoursesText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                No courses rated yet
+              </Text>
+              <Text style={[styles.emptyCoursesSubtext, { color: theme.dark ? '#666' : '#999' }]}>
+                Rate your first course to start building your list
+              </Text>
+              <TouchableOpacity
+                style={[styles.searchCoursesButton, { backgroundColor: colors.primary }]}
+                onPress={handleSearchCourses}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.searchCoursesButtonText}>Search Courses</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={styles.coursesList}>
+              {ratedCourses.map((course, index) => {
+                const scoreColor = getScoreColor(course.finalScore);
+                const rankText = `#${index + 1}`;
+                
+                return (
+                  <View
+                    key={course.id}
+                    style={[styles.courseCard, { backgroundColor: theme.colors.card }]}
+                  >
+                    <View style={styles.courseCardLeft}>
+                      <View style={[styles.rankBadge, { backgroundColor: scoreColor }]}>
+                        <Text style={styles.rankBadgeText}>{rankText}</Text>
+                      </View>
+                      <View style={styles.courseInfo}>
+                        <Text style={[styles.courseName, { color: theme.colors.text }]} numberOfLines={1}>
+                          {course.courseName}
+                        </Text>
+                        <Text style={[styles.courseLocation, { color: theme.dark ? '#98989D' : '#666' }]} numberOfLines={1}>
+                          {course.courseLocation}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.courseCardRight}>
+                      <Text style={[styles.courseScore, { color: scoreColor }]}>
+                        {course.finalScore.toFixed(1)}
+                      </Text>
+                      <Text style={[styles.courseScoreLabel, { color: theme.dark ? '#98989D' : '#666' }]}>
+                        /10
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
         </View>
 
         <View style={styles.badgesSection}>
@@ -614,6 +724,114 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 12,
+  },
+  coursesSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  coursesSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  searchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
+    elevation: 3,
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  emptyCoursesCard: {
+    padding: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
+  },
+  emptyCoursesText: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyCoursesSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  searchCoursesButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 24,
+    boxShadow: '0px 2px 8px rgba(87, 200, 161, 0.3)',
+    elevation: 3,
+  },
+  searchCoursesButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  coursesList: {
+    gap: 12,
+  },
+  courseCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
+    elevation: 2,
+  },
+  courseCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  rankBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  rankBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  courseInfo: {
+    flex: 1,
+  },
+  courseName: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  courseLocation: {
+    fontSize: 14,
+  },
+  courseCardRight: {
+    alignItems: 'flex-end',
+    marginLeft: 12,
+  },
+  courseScore: {
+    fontSize: 24,
+    fontWeight: '800',
+  },
+  courseScoreLabel: {
+    fontSize: 12,
+    marginTop: -4,
   },
   badgesSection: {
     paddingHorizontal: 20,
