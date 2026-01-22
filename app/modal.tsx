@@ -30,6 +30,7 @@ export default function SelectCourseModal() {
   const [searchResults, setSearchResults] = useState<GolfCourse[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
   // Debounced search effect
   useEffect(() => {
@@ -39,6 +40,7 @@ export default function SelectCourseModal() {
       } else {
         setSearchResults([]);
         setShowResults(false);
+        setHasSearched(false);
       }
     }, 500);
 
@@ -46,12 +48,19 @@ export default function SelectCourseModal() {
   }, [searchQuery]);
 
   const performSearch = async (query: string) => {
+    console.log('User searching for golf courses:', query);
     setIsSearching(true);
     setShowResults(true);
+    setHasSearched(true);
     
     try {
-      const results = await searchGolfCourses(query, 20);
+      const results = await searchGolfCourses(query, 50);
+      console.log('Search results received:', results.length, 'courses');
       setSearchResults(results);
+      
+      if (results.length === 0) {
+        console.log('No courses found for query:', query);
+      }
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
@@ -61,6 +70,7 @@ export default function SelectCourseModal() {
   };
 
   const handleCourseSelect = (course: GolfCourse) => {
+    console.log('User selected course:', course.name, course.location);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setSelectedCourse(course);
     Keyboard.dismiss();
@@ -73,6 +83,7 @@ export default function SelectCourseModal() {
     }
 
     try {
+      console.log('User continuing to rating flow with course:', selectedCourse.name);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
       // Navigate directly to rating flow
@@ -97,7 +108,8 @@ export default function SelectCourseModal() {
     ? searchResults
     : sampleCourses;
 
-  const hasApiKey = process.env.EXPO_PUBLIC_GOLF_COURSE_API_KEY;
+  const showingApiResults = showResults && searchQuery.trim().length >= 2 && searchResults.length > 0;
+  const showingSampleCourses = !showResults || searchQuery.trim().length < 2;
 
   return (
     <SafeAreaView 
@@ -110,58 +122,83 @@ export default function SelectCourseModal() {
             Select a Course
           </Text>
           <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-            {hasApiKey 
-              ? 'Search for any course or choose from popular options'
-              : 'Choose from popular courses below'
-            }
+            Search for any course worldwide or choose from popular options
           </Text>
         </View>
 
-        {hasApiKey && (
-          <View style={styles.searchContainer}>
-            <View style={[
-              styles.searchInputContainer,
-              { 
-                backgroundColor: theme.dark ? '#1C1C1E' : '#F2F2F7',
-                borderColor: theme.colors.border,
-              }
-            ]}>
+        <View style={styles.searchContainer}>
+          <View style={[
+            styles.searchInputContainer,
+            { 
+              backgroundColor: theme.dark ? '#1C1C1E' : '#F2F2F7',
+              borderColor: theme.colors.border,
+            }
+          ]}>
+            <IconSymbol
+              ios_icon_name="magnifyingglass"
+              android_material_icon_name="search"
+              size={20}
+              color={theme.dark ? '#98989D' : '#666'}
+            />
+            <TextInput
+              style={[styles.searchInput, { color: theme.colors.text }]}
+              placeholder="Search courses worldwide..."
+              placeholderTextColor={theme.dark ? '#98989D' : '#666'}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoCapitalize="words"
+              autoCorrect={false}
+              returnKeyType="search"
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => {
+                  console.log('User cleared search');
+                  setSearchQuery('');
+                  setSearchResults([]);
+                  setShowResults(false);
+                  setHasSearched(false);
+                }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <IconSymbol
+                  ios_icon_name="xmark.circle.fill"
+                  android_material_icon_name="cancel"
+                  size={20}
+                  color={theme.dark ? '#98989D' : '#666'}
+                />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {showingApiResults && (
+            <View style={styles.resultsBadge}>
               <IconSymbol
-                ios_icon_name="magnifyingglass"
-                android_material_icon_name="search"
-                size={20}
+                ios_icon_name="globe"
+                android_material_icon_name="public"
+                size={16}
+                color={colors.primary}
+              />
+              <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
+                Showing {searchResults.length} real courses from API
+              </Text>
+            </View>
+          )}
+          
+          {showingSampleCourses && (
+            <View style={styles.resultsBadge}>
+              <IconSymbol
+                ios_icon_name="star.fill"
+                android_material_icon_name="star"
+                size={16}
                 color={theme.dark ? '#98989D' : '#666'}
               />
-              <TextInput
-                style={[styles.searchInput, { color: theme.colors.text }]}
-                placeholder="Search courses..."
-                placeholderTextColor={theme.dark ? '#98989D' : '#666'}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoCapitalize="words"
-                autoCorrect={false}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchQuery('');
-                    setSearchResults([]);
-                    setShowResults(false);
-                  }}
-                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                >
-                  <IconSymbol
-                    ios_icon_name="xmark.circle.fill"
-                    android_material_icon_name="cancel"
-                    size={20}
-                    color={theme.dark ? '#98989D' : '#666'}
-                  />
-                </TouchableOpacity>
-              )}
+              <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Popular courses (search to find more)
+              </Text>
             </View>
-          </View>
-        )}
+          )}
+        </View>
 
         <ScrollView
           style={styles.scrollView}
@@ -173,10 +210,10 @@ export default function SelectCourseModal() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching courses...
+                Searching golf courses worldwide...
               </Text>
             </View>
-          ) : displayedCourses.length === 0 && showResults ? (
+          ) : displayedCourses.length === 0 && hasSearched ? (
             <View style={styles.emptyContainer}>
               <IconSymbol
                 ios_icon_name="magnifyingglass"
@@ -188,70 +225,102 @@ export default function SelectCourseModal() {
                 No courses found
               </Text>
               <Text style={[styles.emptySubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Try a different search term
+                Try searching by course name, city, or state
+              </Text>
+              <Text style={[styles.emptyHint, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Examples: &quot;Pebble Beach&quot;, &quot;Augusta&quot;, &quot;St Andrews&quot;
               </Text>
             </View>
           ) : (
             <View style={styles.courseGrid}>
-              {displayedCourses.map((course, index) => (
-                <TouchableOpacity
-                  key={`${course.id}-${index}`}
-                  style={[
-                    styles.courseCard,
-                    selectedCourse?.id === course.id && { 
-                      backgroundColor: colors.primary,
-                      borderColor: colors.primary,
-                    },
-                    { 
-                      backgroundColor: theme.colors.card,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  onPress={() => handleCourseSelect(course)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.courseCardContent}>
-                    <Text
-                      style={[
-                        styles.courseName,
-                        { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.colors.text },
-                      ]}
-                      numberOfLines={2}
-                    >
-                      {course.name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.courseLocation,
-                        { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {course.city}, {course.state}
-                    </Text>
-                    {course.holes && course.par && (
+              {displayedCourses.map((course, index) => {
+                const isApiCourse = course.id.startsWith('api-');
+                return (
+                  <TouchableOpacity
+                    key={`${course.id}-${index}`}
+                    style={[
+                      styles.courseCard,
+                      selectedCourse?.id === course.id && { 
+                        backgroundColor: colors.primary,
+                        borderColor: colors.primary,
+                      },
+                      { 
+                        backgroundColor: theme.colors.card,
+                        borderColor: theme.colors.border,
+                      },
+                    ]}
+                    onPress={() => handleCourseSelect(course)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.courseCardContent}>
+                      {isApiCourse && (
+                        <View style={styles.apiBadge}>
+                          <IconSymbol
+                            ios_icon_name="globe"
+                            android_material_icon_name="public"
+                            size={12}
+                            color={selectedCourse?.id === course.id ? '#FFFFFF' : colors.primary}
+                          />
+                          <Text style={[
+                            styles.apiBadgeText,
+                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : colors.primary }
+                          ]}>
+                            Real Course
+                          </Text>
+                        </View>
+                      )}
                       <Text
                         style={[
-                          styles.courseDetails,
+                          styles.courseName,
+                          { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.colors.text },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {course.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.courseLocation,
                           { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
                         ]}
+                        numberOfLines={1}
                       >
-                        {course.holes} holes • Par {course.par}
+                        {course.city}, {course.state}
                       </Text>
-                    )}
-                    {selectedCourse?.id === course.id && (
-                      <View style={styles.checkmark}>
-                        <IconSymbol
-                          ios_icon_name="checkmark.circle.fill"
-                          android_material_icon_name="check-circle"
-                          size={24}
-                          color="#FFFFFF"
-                        />
-                      </View>
-                    )}
-                  </View>
-                </TouchableOpacity>
-              ))}
+                      {course.country && course.country !== 'USA' && (
+                        <Text
+                          style={[
+                            styles.courseCountry,
+                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                          ]}
+                        >
+                          {course.country}
+                        </Text>
+                      )}
+                      {course.holes && course.par && (
+                        <Text
+                          style={[
+                            styles.courseDetails,
+                            { color: selectedCourse?.id === course.id ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                          ]}
+                        >
+                          {course.holes} holes • Par {course.par}
+                        </Text>
+                      )}
+                      {selectedCourse?.id === course.id && (
+                        <View style={styles.checkmark}>
+                          <IconSymbol
+                            ios_icon_name="checkmark.circle.fill"
+                            android_material_icon_name="check-circle"
+                            size={24}
+                            color="#FFFFFF"
+                          />
+                        </View>
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           )}
         </ScrollView>
@@ -321,6 +390,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 0,
   },
+  resultsBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  resultsBadgeText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   scrollView: {
     flex: 1,
   },
@@ -343,6 +423,18 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
+  apiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: 8,
+  },
+  apiBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
   courseName: {
     fontSize: 18,
     fontWeight: '700',
@@ -350,6 +442,11 @@ const styles = StyleSheet.create({
   },
   courseLocation: {
     fontSize: 14,
+    marginBottom: 4,
+  },
+  courseCountry: {
+    fontSize: 13,
+    fontWeight: '600',
     marginBottom: 4,
   },
   courseDetails: {
@@ -383,6 +480,13 @@ const styles = StyleSheet.create({
   },
   emptySubtext: {
     fontSize: 16,
+    textAlign: 'center',
+  },
+  emptyHint: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    marginTop: 8,
   },
   footer: {
     paddingHorizontal: 20,
