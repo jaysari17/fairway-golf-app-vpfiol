@@ -3,9 +3,8 @@ import { GolfCourse } from '@/types/golf';
 
 const GOLF_COURSE_API_BASE_URL = 'https://api.golfcourseapi.com/v1';
 
-// You'll need to replace this with your actual API key
-// Get your API key from: https://golfcourseapi.com/
-const API_KEY = process.env.EXPO_PUBLIC_GOLF_COURSE_API_KEY || '';
+
+const API_KEY = 'U2RVDJNGLFSNE5B2MAOAZGX2SM';
 
 export interface GolfCourseApiResponse {
   id: number;
