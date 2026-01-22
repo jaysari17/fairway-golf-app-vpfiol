@@ -92,7 +92,7 @@ export default function LoginScreen() {
           >
             <View style={styles.header}>
               <Image
-                source={resolveImageSource(require('@/assets/images/icon.png'))}
+                source={resolveImageSource(require('@/assets/images/9a15ee4b-9d15-4caf-9b1c-d811a85594b7.png'))}
                 style={styles.logo}
                 resizeMode="contain"
               />
