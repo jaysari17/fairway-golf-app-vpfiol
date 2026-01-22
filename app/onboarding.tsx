@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Dimensions,
-  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -45,21 +44,23 @@ export default function OnboardingScreen() {
   const animatedValue = useSharedValue(0);
 
   const handleNext = () => {
+    console.log('User tapped Next on onboarding screen');
     if (currentIndex < onboardingData.length - 1) {
       setCurrentIndex(currentIndex + 1);
       animatedValue.value = withSpring(currentIndex + 1);
     } else {
-      handleComplete();
+      handleGetStarted();
     }
   };
 
   const handleSkip = () => {
-    handleComplete();
+    console.log('User tapped Skip on onboarding screen');
+    handleGetStarted();
   };
 
-  const handleComplete = () => {
-    // Navigate to profile setup instead of directly to the app
-    router.replace('/profile-setup');
+  const handleGetStarted = () => {
+    console.log('Navigating to login screen');
+    router.replace('/login');
   };
 
   const contentStyle = useAnimatedStyle(() => {

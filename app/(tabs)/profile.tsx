@@ -1,5 +1,15 @@
 
+import { colors } from '@/styles/commonStyles';
+import { useRounds } from '@/hooks/useRounds';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
+import { RatingStorageService } from '@/utils/ratingStorage';
+import { UserProfile } from '@/types/golf';
+import { useSocial } from '@/hooks/useSocial';
+import { useProfile } from '@/hooks/useProfile';
+import { availableBadges } from '@/data/badges';
+import { useTheme } from '@react-navigation/native';
+import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -11,27 +21,20 @@ import {
   Platform,
   Image,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
-import { colors } from '@/styles/commonStyles';
-import { UserProfile } from '@/types/golf';
-import { useProfile } from '@/hooks/useProfile';
-import { useRounds } from '@/hooks/useRounds';
-import { useSocial } from '@/hooks/useSocial';
-import { StatCard } from '@/components/StatCard';
-import { availableBadges } from '@/data/badges';
-import { RatingStorageService } from '@/utils/ratingStorage';
 import { CourseRating } from '@/types/rating';
-import * as ImagePicker from 'expo-image-picker';
+import { StatCard } from '@/components/StatCard';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
+import { StorageService } from '@/utils/storage';
 
 export default function ProfileScreen() {
-  const theme = useTheme();
   const router = useRouter();
-  const { profile, updateProfile } = useProfile();
+  const { colors: themeColors } = useTheme();
+  const { profile, loading: profileLoading, updateProfile } = useProfile();
   const { rounds } = useRounds();
   const { friends } = useSocial();
+  const { signOut, user } = useSupabaseAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [editedProfile, setEditedProfile] = useState<UserProfile | null>(null);
   const [ratedCourses, setRatedCourses] = useState<CourseRating[]>([]);
@@ -39,6 +42,7 @@ export default function ProfileScreen() {
   useEffect(() => {
     if (profile) {
       setEditedProfile(profile);
+      loadRatedCourses();
     }
   }, [profile]);
 
@@ -48,8 +52,8 @@ export default function ProfileScreen() {
 
   const loadRatedCourses = async () => {
     try {
+      console.log('Loading rated courses for profile screen');
       const ratings = await RatingStorageService.getRatings();
-      console.log('Loaded rated courses:', ratings.length);
       setRatedCourses(ratings);
     } catch (error) {
       console.error('Error loading rated courses:', error);
@@ -57,540 +61,320 @@ export default function ProfileScreen() {
   };
 
   const handlePickImage = async () => {
-    try {
-      console.log('User tapped to change profile picture');
-      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      
-      if (permissionResult.granted === false) {
-        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
-        return;
-      }
+    console.log('User tapped to pick profile image');
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
 
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [1, 1],
-        quality: 0.8,
+    if (!result.canceled && editedProfile) {
+      setEditedProfile({
+        ...editedProfile,
+        avatar: result.assets[0].uri,
       });
-
-      if (!result.canceled && result.assets[0]) {
-        console.log('User selected new profile picture');
-        setEditedProfile(prev => prev ? { ...prev, avatar: result.assets[0].uri } : null);
-      }
-    } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image. Please try again.');
     }
   };
 
   const handleSave = async () => {
+    console.log('User tapped Save button on profile');
     if (!editedProfile) return;
 
     try {
-      console.log('User saving profile changes');
       await updateProfile(editedProfile);
       setIsEditing(false);
-      Alert.alert('Success', 'Profile updated successfully!');
+      Alert.alert('Success', 'Profile updated successfully');
     } catch (error) {
-      console.error('Error updating profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      console.error('Error saving profile:', error);
+      Alert.alert('Error', 'Failed to save profile');
     }
   };
 
+  const handleLogout = async () => {
+    console.log('User tapped Logout button');
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              console.log('Signing out user');
+              await signOut();
+              await StorageService.clearAll();
+              console.log('User signed out, navigating to login');
+              router.replace('/login');
+            } catch (error) {
+              console.error('Error signing out:', error);
+              Alert.alert('Error', 'Failed to sign out');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleSearchCourses = () => {
-    console.log('User tapped Search Courses button from profile');
+    console.log('User tapped Search Courses button');
     router.push('/modal');
   };
 
   const handleCoursesPlayed = () => {
-    console.log('User tapped Courses Played button');
-    router.push({
-      pathname: '/user-courses',
-      params: {
-        userId: profile?.username || '',
-        userName: profile?.username || '',
-      },
-    });
+    console.log('User tapped Courses Played');
+    router.push('/user-courses');
   };
 
   const handleFollowers = () => {
-    console.log('User tapped Followers button');
-    router.push({
-      pathname: '/user-followers',
-      params: {
-        userId: profile?.username || '',
-        userName: profile?.username || '',
-      },
-    });
+    console.log('User tapped Followers');
+    router.push('/user-followers');
   };
 
   const handleFollowing = () => {
-    console.log('User tapped Following button');
-    router.push({
-      pathname: '/user-following',
-      params: {
-        userId: profile?.username || '',
-        userName: profile?.username || '',
-      },
-    });
+    console.log('User tapped Following');
+    router.push('/user-following');
   };
 
-  if (!profile || !editedProfile) {
+  const getScoreColor = (score: number) => {
+    if (score >= 90) return colors.success;
+    if (score >= 75) return colors.primary;
+    if (score >= 60) return colors.warning;
+    return colors.error;
+  };
+
+  if (profileLoading || !profile || !editedProfile) {
     return (
-      <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.text }]}>Loading profile...</Text>
+          <Text style={[styles.loadingText, { color: themeColors.text }]}>Loading profile...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
+  const displayName = editedProfile.displayName || editedProfile.username;
   const totalRounds = rounds.length;
-  const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
+  const totalCourses = ratedCourses.length;
+  const averageScore = ratedCourses.length > 0
+    ? Math.round(ratedCourses.reduce((sum, r) => sum + (r.finalScore || 0), 0) / ratedCourses.length)
+    : 0;
+
+  const topCourses = ratedCourses
+    .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
+    .slice(0, 3);
+
   const earnedBadges = availableBadges.filter(badge => {
-    if (badge.id === 'first-round') return totalRounds >= 1;
-    if (badge.id === 'five-rounds') return totalRounds >= 5;
-    if (badge.id === 'ten-rounds') return totalRounds >= 10;
-    if (badge.id === 'course-explorer') return uniqueCourses >= 5;
+    if (badge.id === 'first_round') return totalRounds >= 1;
+    if (badge.id === 'five_courses') return totalCourses >= 5;
+    if (badge.id === 'ten_courses') return totalCourses >= 10;
+    if (badge.id === 'twenty_courses') return totalCourses >= 20;
+    if (badge.id === 'fifty_courses') return totalCourses >= 50;
     return false;
   });
 
-  const getScoreColor = (score: number) => {
-    if (score >= 90) return colors.primary;
-    if (score >= 75) return '#10B981';
-    if (score >= 60) return '#F59E0B';
-    if (score >= 40) return '#F97316';
-    return '#EF4444';
-  };
-
-  const coursesPlayedCount = ratedCourses.length;
-  const followersCount = 0;
-  const followingCount = 0;
-
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]} edges={['top']}>
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <Text style={[styles.title, { color: theme.colors.text }]}>Profile</Text>
-            {!isEditing ? (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log('User tapped Edit Profile button');
-                  setIsEditing(true);
-                }}
-                style={styles.editButton}
-              >
-                <IconSymbol
-                  ios_icon_name="pencil"
-                  android_material_icon_name="edit"
-                  size={20}
-                  color={colors.primary}
-                />
-                <Text style={[styles.editButtonText, { color: colors.primary }]}>Edit</Text>
-              </TouchableOpacity>
-            ) : (
-              <View style={styles.editActions}>
-                <TouchableOpacity
-                  onPress={() => {
-                    console.log('User cancelled profile edit');
-                    setIsEditing(false);
-                    setEditedProfile(profile);
-                  }}
-                  style={styles.cancelButton}
-                >
-                  <Text style={[styles.cancelButtonText, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleSave}
-                  style={[styles.saveButton, { backgroundColor: colors.primary }]}
-                >
-                  <Text style={styles.saveButtonText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            <Text style={[styles.headerTitle, { color: themeColors.text }]}>Profile</Text>
+            <View style={styles.headerButtons}>
+              {isEditing ? (
+                <React.Fragment>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setEditedProfile(profile);
+                      setIsEditing(false);
+                    }}
+                    style={styles.headerButton}
+                  >
+                    <Text style={[styles.headerButtonText, { color: colors.error }]}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleSave} style={styles.headerButton}>
+                    <Text style={[styles.headerButtonText, { color: colors.primary }]}>Save</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ) : (
+                <React.Fragment>
+                  <TouchableOpacity onPress={() => setIsEditing(true)} style={styles.headerButton}>
+                    <Text style={[styles.headerButtonText, { color: colors.primary }]}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={handleLogout} style={styles.headerButton}>
+                    <IconSymbol
+                      ios_icon_name="rectangle.portrait.and.arrow.right"
+                      android_material_icon_name="logout"
+                      size={24}
+                      color={colors.error}
+                    />
+                  </TouchableOpacity>
+                </React.Fragment>
+              )}
+            </View>
           </View>
         </View>
 
-        <View style={styles.profileCard}>
+        <View style={[styles.profileCard, { backgroundColor: themeColors.card }]}>
           <TouchableOpacity
             onPress={isEditing ? handlePickImage : undefined}
             disabled={!isEditing}
-            activeOpacity={isEditing ? 0.7 : 1}
+            style={styles.avatarContainer}
           >
-            <View style={styles.avatarContainer}>
-              {editedProfile.avatar ? (
-                <Image source={{ uri: editedProfile.avatar }} style={styles.avatar} />
-              ) : (
-                <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
-                  <Text style={styles.avatarText}>
-                    {editedProfile.username.charAt(0).toUpperCase()}
-                  </Text>
-                </View>
-              )}
-              {isEditing && (
-                <View style={styles.avatarEditOverlay}>
-                  <IconSymbol
-                    ios_icon_name="camera.fill"
-                    android_material_icon_name="camera"
-                    size={24}
-                    color="#FFFFFF"
-                  />
-                </View>
-              )}
-            </View>
+            {editedProfile.avatar ? (
+              <Image source={{ uri: editedProfile.avatar }} style={styles.avatar} />
+            ) : (
+              <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>
+              </View>
+            )}
+            {isEditing && (
+              <View style={styles.editAvatarBadge}>
+                <IconSymbol
+                  ios_icon_name="camera.fill"
+                  android_material_icon_name="camera"
+                  size={16}
+                  color="#FFFFFF"
+                />
+              </View>
+            )}
           </TouchableOpacity>
 
           {isEditing ? (
-            <View style={styles.editForm}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Username</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.dark ? '#1A1A1A' : '#FAFAFA',
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  value={editedProfile.username}
-                  onChangeText={(text) => setEditedProfile({ ...editedProfile, username: text })}
-                  placeholder="@username"
-                  placeholderTextColor={theme.dark ? '#9CA3AF' : '#6B7280'}
-                  autoCapitalize="none"
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Bio</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    styles.bioInput,
-                    {
-                      backgroundColor: theme.dark ? '#1A1A1A' : '#FAFAFA',
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  value={editedProfile.bio}
-                  onChangeText={(text) => setEditedProfile({ ...editedProfile, bio: text })}
-                  placeholder="Tell us about your golf journey..."
-                  placeholderTextColor={theme.dark ? '#9CA3AF' : '#6B7280'}
-                  multiline
-                  numberOfLines={3}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  Handicap (optional)
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.dark ? '#1A1A1A' : '#FAFAFA',
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  value={editedProfile.handicap?.toString() || ''}
-                  onChangeText={(text) => {
-                    const handicap = text ? parseFloat(text) : undefined;
-                    setEditedProfile({ ...editedProfile, handicap });
-                  }}
-                  placeholder="e.g., 12.5"
-                  placeholderTextColor={theme.dark ? '#9CA3AF' : '#6B7280'}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
+            <React.Fragment>
+              <TextInput
+                style={[styles.input, { color: themeColors.text, borderColor: themeColors.border }]}
+                value={editedProfile.displayName || ''}
+                onChangeText={(text) => setEditedProfile({ ...editedProfile, displayName: text })}
+                placeholder="Display Name"
+                placeholderTextColor={themeColors.text + '80'}
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text, borderColor: themeColors.border }]}
+                value={editedProfile.bio || ''}
+                onChangeText={(text) => setEditedProfile({ ...editedProfile, bio: text })}
+                placeholder="Bio"
+                placeholderTextColor={themeColors.text + '80'}
+                multiline
+              />
+              <TextInput
+                style={[styles.input, { color: themeColors.text, borderColor: themeColors.border }]}
+                value={editedProfile.handicap?.toString() || ''}
+                onChangeText={(text) => setEditedProfile({ ...editedProfile, handicap: parseFloat(text) || undefined })}
+                placeholder="Handicap"
+                placeholderTextColor={themeColors.text + '80'}
+                keyboardType="decimal-pad"
+              />
+            </React.Fragment>
           ) : (
-            <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: theme.colors.text }]}>
-                @{profile.username}
-              </Text>
-              {profile.bio && (
-                <Text style={[styles.profileBio, { color: theme.colors.text }]}>
-                  {profile.bio}
-                </Text>
+            <React.Fragment>
+              <Text style={[styles.displayName, { color: themeColors.text }]}>{displayName}</Text>
+              <Text style={[styles.username, { color: themeColors.text }]}>@{editedProfile.username}</Text>
+              {editedProfile.bio && (
+                <Text style={[styles.bio, { color: themeColors.text }]}>{editedProfile.bio}</Text>
               )}
-              {profile.handicap !== undefined && (
+              {editedProfile.handicap !== undefined && (
                 <View style={styles.handicapBadge}>
-                  <Text style={[styles.handicapText, { color: colors.primary }]}>
-                    Handicap: {profile.handicap}
-                  </Text>
+                  <Text style={styles.handicapText}>Handicap: {editedProfile.handicap}</Text>
                 </View>
               )}
-            </View>
+            </React.Fragment>
           )}
-        </View>
 
-        <View style={styles.socialButtonsSection}>
-          <TouchableOpacity
-            style={[
-              styles.socialButton,
-              {
-                backgroundColor: theme.colors.card,
-                borderColor: theme.colors.border,
-              },
-            ]}
-            onPress={handleCoursesPlayed}
-          >
-            <IconSymbol
-              ios_icon_name="flag.fill"
-              android_material_icon_name="location-on"
-              size={24}
-              color={colors.primary}
-            />
-            <View style={styles.socialButtonTextContainer}>
-              <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
-                {coursesPlayedCount}
-              </Text>
-              <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                Courses Played
-              </Text>
-            </View>
-            <IconSymbol
-              ios_icon_name="chevron.right"
-              android_material_icon_name="arrow-forward"
-              size={20}
-              color={theme.dark ? '#9CA3AF' : '#6B7280'}
-            />
-          </TouchableOpacity>
-
-          <View style={styles.socialButtonsRow}>
-            <TouchableOpacity
-              style={[
-                styles.socialButtonHalf,
-                {
-                  backgroundColor: theme.colors.card,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              onPress={handleFollowers}
-            >
-              <IconSymbol
-                ios_icon_name="person.2.fill"
-                android_material_icon_name="group"
-                size={24}
-                color={colors.primary}
-              />
-              <View style={styles.socialButtonTextContainer}>
-                <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
-                  {followersCount}
-                </Text>
-                <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                  Followers
-                </Text>
-              </View>
+          <View style={styles.statsRow}>
+            <TouchableOpacity style={styles.statItem} onPress={handleCoursesPlayed}>
+              <Text style={[styles.statValue, { color: themeColors.text }]}>{totalCourses}</Text>
+              <Text style={[styles.statLabel, { color: themeColors.text }]}>Courses</Text>
             </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.socialButtonHalf,
-                {
-                  backgroundColor: theme.colors.card,
-                  borderColor: theme.colors.border,
-                },
-              ]}
-              onPress={handleFollowing}
-            >
-              <IconSymbol
-                ios_icon_name="person.fill.checkmark"
-                android_material_icon_name="person"
-                size={24}
-                color={colors.primary}
-              />
-              <View style={styles.socialButtonTextContainer}>
-                <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
-                  {followingCount}
-                </Text>
-                <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                  Following
-                </Text>
-              </View>
+            <TouchableOpacity style={styles.statItem} onPress={handleFollowers}>
+              <Text style={[styles.statValue, { color: themeColors.text }]}>{friends.length}</Text>
+              <Text style={[styles.statLabel, { color: themeColors.text }]}>Followers</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.statItem} onPress={handleFollowing}>
+              <Text style={[styles.statValue, { color: themeColors.text }]}>{friends.length}</Text>
+              <Text style={[styles.statLabel, { color: themeColors.text }]}>Following</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        <View style={styles.statsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Stats</Text>
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Statistics</Text>
           <View style={styles.statsGrid}>
             <StatCard
-              title="Rounds"
+              title="Total Rounds"
               value={totalRounds.toString()}
               icon="golf-course"
               color={colors.primary}
             />
             <StatCard
-              title="Courses"
-              value={uniqueCourses.toString()}
-              icon="location-on"
-              color="#10B981"
-            />
-            <StatCard
-              title="Friends"
-              value={friends.length.toString()}
-              icon="group"
-              color="#F59E0B"
+              title="Avg Rating"
+              value={averageScore.toString()}
+              icon="star"
+              color={getScoreColor(averageScore)}
             />
           </View>
         </View>
 
-        <View style={styles.coursesSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>My Courses</Text>
-            <TouchableOpacity
-              onPress={handleSearchCourses}
-              style={[styles.searchButton, { backgroundColor: colors.primary }]}
-            >
-              <IconSymbol
-                ios_icon_name="magnifyingglass"
-                android_material_icon_name="search"
-                size={16}
-                color="#FFFFFF"
-              />
-              <Text style={styles.searchButtonText}>Search</Text>
-            </TouchableOpacity>
+        {topCourses.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Top Courses</Text>
+            {topCourses.map((course, index) => (
+              <View key={course.id} style={[styles.courseItem, { backgroundColor: themeColors.card }]}>
+                <View style={styles.courseRank}>
+                  <Text style={styles.courseRankText}>{index + 1}</Text>
+                </View>
+                <View style={styles.courseInfo}>
+                  <Text style={[styles.courseName, { color: themeColors.text }]}>{course.courseName}</Text>
+                  <Text style={[styles.courseLocation, { color: themeColors.text }]}>{course.courseLocation}</Text>
+                </View>
+                <View style={[styles.courseScore, { backgroundColor: getScoreColor(course.finalScore || 0) }]}>
+                  <Text style={styles.courseScoreText}>{Math.round(course.finalScore || 0)}</Text>
+                </View>
+              </View>
+            ))}
           </View>
-
-          {ratedCourses.length === 0 ? (
-            <View style={styles.emptyState}>
-              <IconSymbol
-                ios_icon_name="star"
-                android_material_icon_name="star"
-                size={48}
-                color={theme.dark ? '#9CA3AF' : '#6B7280'}
-              />
-              <Text style={[styles.emptyStateText, { color: theme.colors.text }]}>
-                No courses rated yet
-              </Text>
-              <Text style={[styles.emptyStateSubtext, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                Search and rate courses to build your list
-              </Text>
-              <TouchableOpacity
-                onPress={handleSearchCourses}
-                style={[styles.emptyStateButton, { backgroundColor: colors.primary }]}
-              >
-                <Text style={styles.emptyStateButtonText}>Rate Your First Course</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.coursesList}>
-              {ratedCourses
-                .sort((a, b) => b.finalScore - a.finalScore)
-                .slice(0, 5)
-                .map((rating, index) => {
-                  const rankNumber = index + 1;
-                  const scoreColor = getScoreColor(rating.finalScore);
-                  const playCountText = `Played ${rating.playCount} ${rating.playCount === 1 ? 'time' : 'times'}`;
-                  
-                  return (
-                    <View
-                      key={rating.courseId}
-                      style={[
-                        styles.courseItem,
-                        {
-                          backgroundColor: theme.colors.card,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                    >
-                      <View style={styles.courseRank}>
-                        <Text style={[styles.courseRankText, { color: theme.colors.text }]}>
-                          #{rankNumber}
-                        </Text>
-                      </View>
-                      <View style={styles.courseInfo}>
-                        <Text style={[styles.courseName, { color: theme.colors.text }]}>
-                          {rating.courseName}
-                        </Text>
-                        <Text style={[styles.courseLocation, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                          {rating.courseLocation}
-                        </Text>
-                        <Text style={[styles.coursePlayCount, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                          {playCountText}
-                        </Text>
-                      </View>
-                      <View style={styles.courseScore}>
-                        <Text
-                          style={[
-                            styles.courseScoreText,
-                            { color: scoreColor },
-                          ]}
-                        >
-                          {rating.finalScore}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })}
-              {ratedCourses.length > 5 && (
-                <TouchableOpacity
-                  style={[styles.viewAllButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
-                  onPress={handleCoursesPlayed}
-                >
-                  <Text style={[styles.viewAllButtonText, { color: colors.primary }]}>
-                    View All {ratedCourses.length} Courses
-                  </Text>
-                  <IconSymbol
-                    ios_icon_name="chevron.right"
-                    android_material_icon_name="arrow-forward"
-                    size={20}
-                    color={colors.primary}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
+        )}
 
         {earnedBadges.length > 0 && (
-          <View style={styles.badgesSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Badges</Text>
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Badges</Text>
             <View style={styles.badgesGrid}>
               {earnedBadges.map((badge) => (
-                <View
-                  key={badge.id}
-                  style={[
-                    styles.badgeCard,
-                    {
-                      backgroundColor: theme.colors.card,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                >
-                  <Text style={styles.badgeEmoji}>{badge.emoji}</Text>
-                  <Text style={[styles.badgeName, { color: theme.colors.text }]}>
-                    {badge.name}
-                  </Text>
-                  <Text style={[styles.badgeDescription, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                    {badge.description}
-                  </Text>
+                <View key={badge.id} style={[styles.badgeItem, { backgroundColor: themeColors.card }]}>
+                  <Text style={styles.badgeIcon}>{badge.icon}</Text>
+                  <Text style={[styles.badgeName, { color: themeColors.text }]}>{badge.name}</Text>
                 </View>
               ))}
             </View>
           </View>
         )}
+
+        <TouchableOpacity
+          style={[styles.searchButton, { backgroundColor: colors.primary }]}
+          onPress={handleSearchCourses}
+        >
+          <IconSymbol
+            ios_icon_name="magnifyingglass"
+            android_material_icon_name="search"
+            size={20}
+            color="#FFFFFF"
+          />
+          <Text style={styles.searchButtonText}>Search Courses Worldwide</Text>
+        </TouchableOpacity>
+
+        <View style={styles.bottomPadding} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-  },
-  contentContainer: {
-    paddingBottom: 120,
   },
   loadingContainer: {
     flex: 1,
@@ -600,9 +384,12 @@ const styles = StyleSheet.create({
   loadingText: {
     fontSize: 16,
   },
+  scrollView: {
+    flex: 1,
+  },
   header: {
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 20 : 8,
+    paddingTop: Platform.OS === 'android' ? 48 : 16,
     paddingBottom: 16,
   },
   headerTop: {
@@ -610,52 +397,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  title: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 32,
     fontWeight: '800',
-    letterSpacing: 1,
   },
-  editButton: {
+  headerButtons: {
     flexDirection: 'row',
+    gap: 16,
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
   },
-  editButtonText: {
+  headerButton: {
+    padding: 4,
+  },
+  headerButtonText: {
     fontSize: 16,
     fontWeight: '600',
-  },
-  editActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  cancelButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  saveButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   profileCard: {
+    marginHorizontal: 20,
+    padding: 24,
+    borderRadius: 16,
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 24,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+    elevation: 2,
   },
   avatarContainer: {
-    position: 'relative',
     marginBottom: 16,
+    position: 'relative',
   },
   avatar: {
     width: 100,
@@ -670,170 +438,91 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatarText: {
-    color: '#FFFFFF',
     fontSize: 40,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
-  avatarEditOverlay: {
+  editAvatarBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
     backgroundColor: colors.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 3,
     borderColor: '#FFFFFF',
   },
-  profileInfo: {
-    alignItems: 'center',
-    gap: 8,
-  },
-  profileName: {
+  displayName: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  profileBio: {
-    fontSize: 15,
+  username: {
+    fontSize: 16,
+    opacity: 0.6,
+    marginBottom: 8,
+  },
+  bio: {
+    fontSize: 14,
     textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
+    marginBottom: 12,
+    opacity: 0.8,
   },
   handicapBadge: {
-    backgroundColor: colors.highlight,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginTop: 12,
+    backgroundColor: colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginBottom: 16,
   },
   handicapText: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  editForm: {
-    width: '100%',
-    gap: 16,
-  },
-  inputGroup: {
-    gap: 8,
-  },
-  inputLabel: {
+    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
   },
   input: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
+    width: '100%',
     borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
     fontSize: 16,
   },
-  bioInput: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  socialButtonsSection: {
-    paddingHorizontal: 20,
-    marginTop: 8,
-    gap: 12,
-  },
-  socialButton: {
+  statsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
+    width: '100%',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  statItem: {
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
   },
-  socialButtonsRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  socialButtonHalf: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
-  },
-  socialButtonTextContainer: {
-    flex: 1,
-    gap: 4,
-  },
-  socialButtonCount: {
+  statValue: {
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: '700',
+    marginBottom: 4,
   },
-  socialButtonLabel: {
-    fontSize: 13,
-    fontWeight: '600',
+  statLabel: {
+    fontSize: 14,
+    opacity: 0.6,
   },
-  statsSection: {
-    paddingHorizontal: 20,
+  section: {
     marginTop: 24,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   statsGrid: {
     flexDirection: 'row',
-    gap: 12,
-  },
-  coursesSection: {
-    paddingHorizontal: 20,
-    marginTop: 32,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  searchButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-  },
-  searchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    gap: 12,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 16,
-  },
-  emptyStateSubtext: {
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  emptyStateButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    marginTop: 16,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  coursesList: {
     gap: 12,
   },
   courseItem: {
@@ -841,82 +530,86 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    gap: 12,
+    marginBottom: 8,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    elevation: 1,
   },
   courseRank: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.highlight,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   courseRankText: {
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '800',
+    fontWeight: '700',
   },
   courseInfo: {
     flex: 1,
-    gap: 4,
   },
   courseName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
+    marginBottom: 2,
   },
   courseLocation: {
     fontSize: 14,
-  },
-  coursePlayCount: {
-    fontSize: 12,
+    opacity: 0.6,
   },
   courseScore: {
-    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   courseScoreText: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  viewAllButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
-  },
-  viewAllButtonText: {
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-  },
-  badgesSection: {
-    paddingHorizontal: 20,
-    marginTop: 32,
   },
   badgesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
   },
-  badgeCard: {
-    width: '48%',
-    padding: 16,
+  badgeItem: {
+    width: '30%',
+    aspectRatio: 1,
     borderRadius: 12,
-    borderWidth: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
+    padding: 12,
+    boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.1)',
+    elevation: 1,
   },
-  badgeEmoji: {
-    fontSize: 40,
+  badgeIcon: {
+    fontSize: 32,
+    marginBottom: 8,
   },
   badgeName: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '600',
     textAlign: 'center',
   },
-  badgeDescription: {
-    fontSize: 12,
-    textAlign: 'center',
+  searchButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginTop: 24,
+    padding: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  searchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 100,
   },
 });

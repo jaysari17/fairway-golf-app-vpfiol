@@ -15,7 +15,7 @@ import {
 } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { WidgetProvider } from "@/contexts/WidgetContext";
-import { SupabaseAuthProvider } from "@/contexts/SupabaseAuthContext";
+import { SupabaseAuthProvider, useSupabaseAuth } from "@/contexts/SupabaseAuthContext";
 import { StorageService } from "@/utils/storage";
 
 SplashScreen.preventAutoHideAsync();
@@ -24,8 +24,9 @@ export const unstable_settings = {
   initialRouteName: "(tabs)",
 };
 
-export default function RootLayout() {
+function RootNavigator() {
   const colorScheme = useColorScheme();
+  const { user, loading: authLoading } = useSupabaseAuth();
   const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
   const [loaded] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -35,6 +36,7 @@ export default function RootLayout() {
     async function checkOnboarding() {
       try {
         const complete = await StorageService.isOnboardingComplete();
+        console.log('Onboarding complete:', complete);
         setIsOnboardingComplete(complete);
       } catch (error) {
         console.error('Error checking onboarding:', error);
@@ -45,16 +47,30 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    if (loaded && isOnboardingComplete !== null) {
+    if (loaded && !authLoading && isOnboardingComplete !== null) {
       SplashScreen.hideAsync();
       
+      console.log('Auth state - User:', user ? 'logged in' : 'not logged in', 'Onboarding:', isOnboardingComplete);
+      
+      // If onboarding not complete, show onboarding
       if (!isOnboardingComplete) {
+        console.log('Navigating to onboarding');
         router.replace('/onboarding');
       }
+      // If onboarding complete but no user, show login
+      else if (!user) {
+        console.log('Navigating to login');
+        router.replace('/login');
+      }
+      // If user is logged in, show main app
+      else {
+        console.log('User authenticated, showing main app');
+        router.replace('/(tabs)');
+      }
     }
-  }, [loaded, isOnboardingComplete]);
+  }, [loaded, authLoading, isOnboardingComplete, user]);
 
-  if (!loaded || isOnboardingComplete === null) {
+  if (!loaded || authLoading || isOnboardingComplete === null) {
     return null;
   }
 
@@ -84,85 +100,92 @@ export default function RootLayout() {
   };
 
   return (
+    <ThemeProvider
+      value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
+    >
+      <GestureHandlerRootView>
+        <Stack>
+          <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
+          <Stack.Screen name="contact-sync" options={{ headerShown: false }} />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="modal"
+            options={{
+              presentation: "modal",
+              title: "Log Round",
+            }}
+          />
+          <Stack.Screen
+            name="rating-flow"
+            options={{
+              presentation: "modal",
+              title: "Rate Course",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="formsheet"
+            options={{
+              presentation: "formSheet",
+              title: "Course Details",
+              sheetGrabberVisible: true,
+              sheetAllowedDetents: [0.5, 0.8, 1.0],
+              sheetCornerRadius: 20,
+            }}
+          />
+          <Stack.Screen
+            name="transparent-modal"
+            options={{
+              presentation: "transparentModal",
+              headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="comment-modal"
+            options={{
+              presentation: "modal",
+              title: "Comments",
+            }}
+          />
+          <Stack.Screen
+            name="user-courses"
+            options={{
+              presentation: "modal",
+              title: "Courses Played",
+            }}
+          />
+          <Stack.Screen
+            name="user-followers"
+            options={{
+              presentation: "modal",
+              title: "Followers",
+            }}
+          />
+          <Stack.Screen
+            name="user-following"
+            options={{
+              presentation: "modal",
+              title: "Following",
+            }}
+          />
+        </Stack>
+        <SystemBars style={"auto"} />
+      </GestureHandlerRootView>
+    </ThemeProvider>
+  );
+}
+
+export default function RootLayout() {
+  return (
     <>
       <StatusBar style="auto" animated />
-      <ThemeProvider
-        value={colorScheme === "dark" ? CustomDarkTheme : CustomDefaultTheme}
-      >
-        <SupabaseAuthProvider>
-          <WidgetProvider>
-            <GestureHandlerRootView>
-              <Stack>
-                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-                <Stack.Screen name="profile-setup" options={{ headerShown: false }} />
-                <Stack.Screen name="contact-sync" options={{ headerShown: false }} />
-                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-                <Stack.Screen
-                  name="modal"
-                  options={{
-                    presentation: "modal",
-                    title: "Log Round",
-                  }}
-                />
-                <Stack.Screen
-                  name="rating-flow"
-                  options={{
-                    presentation: "modal",
-                    title: "Rate Course",
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="formsheet"
-                  options={{
-                    presentation: "formSheet",
-                    title: "Course Details",
-                    sheetGrabberVisible: true,
-                    sheetAllowedDetents: [0.5, 0.8, 1.0],
-                    sheetCornerRadius: 20,
-                  }}
-                />
-                <Stack.Screen
-                  name="transparent-modal"
-                  options={{
-                    presentation: "transparentModal",
-                    headerShown: false,
-                  }}
-                />
-                <Stack.Screen
-                  name="comment-modal"
-                  options={{
-                    presentation: "modal",
-                    title: "Comments",
-                  }}
-                />
-                <Stack.Screen
-                  name="user-courses"
-                  options={{
-                    presentation: "modal",
-                    title: "Courses Played",
-                  }}
-                />
-                <Stack.Screen
-                  name="user-followers"
-                  options={{
-                    presentation: "modal",
-                    title: "Followers",
-                  }}
-                />
-                <Stack.Screen
-                  name="user-following"
-                  options={{
-                    presentation: "modal",
-                    title: "Following",
-                  }}
-                />
-              </Stack>
-              <SystemBars style={"auto"} />
-            </GestureHandlerRootView>
-          </WidgetProvider>
-        </SupabaseAuthProvider>
-      </ThemeProvider>
+      <SupabaseAuthProvider>
+        <WidgetProvider>
+          <RootNavigator />
+        </WidgetProvider>
+      </SupabaseAuthProvider>
     </>
   );
 }

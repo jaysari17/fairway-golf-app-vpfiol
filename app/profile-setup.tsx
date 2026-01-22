@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -17,11 +18,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/styles/commonStyles';
 import { StorageService } from '@/utils/storage';
 import { UserProfile } from '@/types/golf';
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 export default function ProfileSetupScreen() {
   const router = useRouter();
+  const { signUp } = useSupabaseAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [handicap, setHandicap] = useState('');
   const [loading, setLoading] = useState(false);
@@ -37,6 +41,8 @@ export default function ProfileSetupScreen() {
   };
 
   const handleContinue = async () => {
+    console.log('User tapped Continue button on profile setup');
+    
     if (!username.trim()) {
       Alert.alert('Required Field', 'Please enter a username');
       return;
@@ -47,6 +53,11 @@ export default function ProfileSetupScreen() {
       return;
     }
 
+    if (!password.trim() || password.length < 6) {
+      Alert.alert('Invalid Password', 'Password must be at least 6 characters');
+      return;
+    }
+
     if (!phoneNumber.trim() || !validatePhoneNumber(phoneNumber)) {
       Alert.alert('Invalid Phone', 'Please enter a valid phone number');
       return;
@@ -54,7 +65,23 @@ export default function ProfileSetupScreen() {
 
     try {
       setLoading(true);
+      console.log('Creating Supabase account for:', email);
 
+      // Create Supabase account
+      const { error: signUpError } = await signUp(email, password, {
+        username: username.trim(),
+        phone_number: phoneNumber.trim(),
+      });
+
+      if (signUpError) {
+        console.error('Supabase signup error:', signUpError);
+        Alert.alert('Signup Error', signUpError.message || 'Failed to create account. Please try again.');
+        return;
+      }
+
+      console.log('Supabase account created successfully');
+
+      // Save profile to Supabase
       const profile: UserProfile = {
         username: username.trim(),
         email: email.trim(),
@@ -66,12 +93,17 @@ export default function ProfileSetupScreen() {
       };
 
       await StorageService.saveProfile(profile);
+      console.log('Profile saved to Supabase');
+      
+      // Mark onboarding as complete
+      await StorageService.setOnboardingComplete();
+      console.log('Onboarding marked complete');
       
       // Navigate to contact sync screen
-      router.push('/contact-sync');
+      router.replace('/contact-sync');
     } catch (error) {
-      console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile. Please try again.');
+      console.error('Error during profile setup:', error);
+      Alert.alert('Error', 'Failed to create account. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -93,9 +125,9 @@ export default function ProfileSetupScreen() {
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.header}>
-              <Text style={styles.title}>Create Your Profile</Text>
+              <Text style={styles.title}>Create Your Account</Text>
               <Text style={styles.subtitle}>
-                Let's get you set up to track your golf journey
+                Sign up to track your golf journey and connect with friends
               </Text>
             </View>
 
@@ -110,6 +142,7 @@ export default function ProfileSetupScreen() {
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
                 />
               </View>
 
@@ -124,6 +157,22 @@ export default function ProfileSetupScreen() {
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  editable={!loading}
+                />
+              </View>
+
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Password *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="At least 6 characters"
+                  placeholderTextColor="rgba(255, 255, 255, 0.5)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  editable={!loading}
                 />
               </View>
 
@@ -136,6 +185,7 @@ export default function ProfileSetupScreen() {
                   placeholder="+1 (555) 123-4567"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="phone-pad"
+                  editable={!loading}
                 />
                 <Text style={styles.helperText}>
                   Used to connect with friends who are already on FAIRWAY
@@ -151,6 +201,7 @@ export default function ProfileSetupScreen() {
                   placeholder="e.g., 12.5"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="decimal-pad"
+                  editable={!loading}
                 />
               </View>
             </View>
@@ -161,10 +212,16 @@ export default function ProfileSetupScreen() {
               activeOpacity={0.8}
               disabled={loading}
             >
-              <Text style={styles.continueButtonText}>
-                {loading ? 'Saving...' : 'Continue'}
-              </Text>
+              {loading ? (
+                <ActivityIndicator color={colors.primary} />
+              ) : (
+                <Text style={styles.continueButtonText}>Create Account</Text>
+              )}
             </TouchableOpacity>
+
+            <Text style={styles.termsText}>
+              By creating an account, you agree to our Terms of Service and Privacy Policy
+            </Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -237,9 +294,11 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.15)',
     elevation: 4,
+    minHeight: 54,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -248,5 +307,13 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 18,
     fontWeight: '700',
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#FFFFFF',
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 16,
+    lineHeight: 16,
   },
 });
