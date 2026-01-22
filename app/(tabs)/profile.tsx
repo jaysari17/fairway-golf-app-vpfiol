@@ -9,6 +9,7 @@ import {
   TextInput,
   Alert,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import { useSocial } from '@/hooks/useSocial';
 import { UserProfile } from '@/types/golf';
 import { colors } from '@/styles/commonStyles';
 import { availableBadges } from '@/data/badges';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -33,6 +35,7 @@ export default function ProfileScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState('');
   const [handicap, setHandicap] = useState('');
+  const [avatar, setAvatar] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (profile) {
@@ -41,16 +44,65 @@ export default function ProfileScreen() {
       setPhoneNumber(profile.phoneNumber || '');
       setBio(profile.bio || '');
       setHandicap(profile.handicap?.toString() || '');
+      setAvatar(profile.avatar);
     } else {
       setUsername('Golf Enthusiast');
       setEmail('');
       setPhoneNumber('');
       setBio('');
       setHandicap('');
+      setAvatar(undefined);
     }
   }, [profile]);
 
+  const handlePickImage = async () => {
+    console.log('User tapped change profile picture');
+    
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected:', result.assets[0].uri);
+        setAvatar(result.assets[0].uri);
+        
+        if (!isEditing) {
+          const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
+          const updatedProfile: UserProfile = {
+            username: username.trim() || 'Golf Enthusiast',
+            email: email.trim(),
+            phoneNumber: phoneNumber.trim(),
+            bio: bio.trim() || undefined,
+            handicap: handicap ? parseFloat(handicap) : undefined,
+            avatar: result.assets[0].uri,
+            totalRounds: rounds.length,
+            totalCourses: uniqueCourses,
+            contactsSynced: profile?.contactsSynced || false,
+          };
+          await updateProfile(updatedProfile);
+          Alert.alert('Success', 'Profile picture updated!');
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   const handleSave = async () => {
+    console.log('User tapped Save profile');
+    
     try {
       const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
       const updatedProfile: UserProfile = {
@@ -59,6 +111,7 @@ export default function ProfileScreen() {
         phoneNumber: phoneNumber.trim(),
         bio: bio.trim() || undefined,
         handicap: handicap ? parseFloat(handicap) : undefined,
+        avatar: avatar,
         totalRounds: rounds.length,
         totalCourses: uniqueCourses,
         contactsSynced: profile?.contactsSynced || false,
@@ -84,6 +137,8 @@ export default function ProfileScreen() {
     return false;
   });
 
+  const usernameInitial = username.charAt(0).toUpperCase();
+
   return (
     <SafeAreaView 
       style={[styles.safeArea, { backgroundColor: theme.colors.background }]} 
@@ -95,11 +150,32 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {username.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={styles.avatarTouchable}
+            onPress={handlePickImage}
+            activeOpacity={0.8}
+          >
+            {avatar ? (
+              <Image
+                source={{ uri: avatar }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>
+                  {usernameInitial}
+                </Text>
+              </View>
+            )}
+            <View style={[styles.cameraIconContainer, { backgroundColor: colors.primary }]}>
+              <IconSymbol
+                ios_icon_name="camera.fill"
+                android_material_icon_name="camera"
+                size={16}
+                color="#FFFFFF"
+              />
+            </View>
+          </TouchableOpacity>
 
           {isEditing ? (
             <View style={styles.editContainer}>
@@ -375,18 +451,38 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 24,
   },
+  avatarTouchable: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarText: {
     fontSize: 48,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   profileInfo: {
     alignItems: 'center',

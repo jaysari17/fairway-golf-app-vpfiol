@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '@react-navigation/native';
@@ -19,6 +20,7 @@ import { useSocial } from '@/hooks/useSocial';
 import { UserProfile } from '@/types/golf';
 import { colors } from '@/styles/commonStyles';
 import { availableBadges } from '@/data/badges';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function ProfileScreen() {
   const theme = useTheme();
@@ -28,30 +30,90 @@ export default function ProfileScreen() {
   
   const [isEditing, setIsEditing] = useState(false);
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [bio, setBio] = useState('');
   const [handicap, setHandicap] = useState('');
+  const [avatar, setAvatar] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (profile) {
       setUsername(profile.username);
+      setEmail(profile.email || '');
+      setPhoneNumber(profile.phoneNumber || '');
       setBio(profile.bio || '');
       setHandicap(profile.handicap?.toString() || '');
+      setAvatar(profile.avatar);
     } else {
       setUsername('Golf Enthusiast');
+      setEmail('');
+      setPhoneNumber('');
       setBio('');
       setHandicap('');
+      setAvatar(undefined);
     }
   }, [profile]);
 
+  const handlePickImage = async () => {
+    console.log('User tapped change profile picture');
+    
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      
+      if (permissionResult.granted === false) {
+        Alert.alert('Permission Required', 'Please allow access to your photo library to change your profile picture.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        console.log('Image selected:', result.assets[0].uri);
+        setAvatar(result.assets[0].uri);
+        
+        if (!isEditing) {
+          const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
+          const updatedProfile: UserProfile = {
+            username: username.trim() || 'Golf Enthusiast',
+            email: email.trim(),
+            phoneNumber: phoneNumber.trim(),
+            bio: bio.trim() || undefined,
+            handicap: handicap ? parseFloat(handicap) : undefined,
+            avatar: result.assets[0].uri,
+            totalRounds: rounds.length,
+            totalCourses: uniqueCourses,
+            contactsSynced: profile?.contactsSynced || false,
+          };
+          await updateProfile(updatedProfile);
+          Alert.alert('Success', 'Profile picture updated!');
+        }
+      }
+    } catch (error) {
+      console.error('Error picking image:', error);
+      Alert.alert('Error', 'Failed to pick image. Please try again.');
+    }
+  };
+
   const handleSave = async () => {
+    console.log('User tapped Save profile');
+    
     try {
       const uniqueCourses = new Set(rounds.map(r => r.courseId)).size;
       const updatedProfile: UserProfile = {
         username: username.trim() || 'Golf Enthusiast',
+        email: email.trim(),
+        phoneNumber: phoneNumber.trim(),
         bio: bio.trim() || undefined,
         handicap: handicap ? parseFloat(handicap) : undefined,
+        avatar: avatar,
         totalRounds: rounds.length,
         totalCourses: uniqueCourses,
+        contactsSynced: profile?.contactsSynced || false,
       };
       await updateProfile(updatedProfile);
       setIsEditing(false);
@@ -74,6 +136,8 @@ export default function ProfileScreen() {
     return false;
   });
 
+  const usernameInitial = username.charAt(0).toUpperCase();
+
   return (
     <SafeAreaView 
       style={[styles.safeArea, { backgroundColor: theme.colors.background }]} 
@@ -85,11 +149,32 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarText}>
-              {username.charAt(0).toUpperCase()}
-            </Text>
-          </View>
+          <TouchableOpacity
+            style={styles.avatarTouchable}
+            onPress={handlePickImage}
+            activeOpacity={0.8}
+          >
+            {avatar ? (
+              <Image
+                source={{ uri: avatar }}
+                style={styles.avatarImage}
+              />
+            ) : (
+              <View style={[styles.avatarContainer, { backgroundColor: colors.primary }]}>
+                <Text style={styles.avatarText}>
+                  {usernameInitial}
+                </Text>
+              </View>
+            )}
+            <View style={[styles.cameraIconContainer, { backgroundColor: colors.primary }]}>
+              <IconSymbol
+                ios_icon_name="camera.fill"
+                android_material_icon_name="camera"
+                size={16}
+                color="#FFFFFF"
+              />
+            </View>
+          </TouchableOpacity>
 
           {isEditing ? (
             <View style={styles.editContainer}>
@@ -106,6 +191,37 @@ export default function ProfileScreen() {
                 onChangeText={setUsername}
                 placeholder="Your name"
                 placeholderTextColor={theme.dark ? '#666' : '#999'}
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text 
+                  }
+                ]}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Email"
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    backgroundColor: theme.colors.card,
+                    borderColor: theme.colors.border,
+                    color: theme.colors.text 
+                  }
+                ]}
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
+                placeholder="Phone number"
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                keyboardType="phone-pad"
               />
               <TextInput
                 style={[
@@ -160,6 +276,16 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.profileInfo}>
               <Text style={[styles.name, { color: theme.colors.text }]}>{username}</Text>
+              {email && (
+                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
+                  {email}
+                </Text>
+              )}
+              {phoneNumber && (
+                <Text style={[styles.contactInfo, { color: theme.dark ? '#98989D' : '#666' }]}>
+                  {phoneNumber}
+                </Text>
+              )}
               {bio && (
                 <Text style={[styles.bio, { color: theme.dark ? '#98989D' : '#666' }]}>
                   {bio}
@@ -324,18 +450,38 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 24,
   },
+  avatarTouchable: {
+    position: 'relative',
+    marginBottom: 16,
+  },
   avatarContainer: {
     width: 100,
     height: 100,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+  },
+  avatarImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
   },
   avatarText: {
     fontSize: 48,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   profileInfo: {
     alignItems: 'center',
@@ -344,12 +490,17 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 28,
     fontWeight: '800',
-    marginBottom: 8,
+    marginBottom: 4,
+  },
+  contactInfo: {
+    fontSize: 14,
+    marginBottom: 4,
   },
   bio: {
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 22,
+    marginTop: 8,
     marginBottom: 12,
   },
   handicapBadge: {
@@ -357,6 +508,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 16,
     backgroundColor: 'rgba(87, 200, 161, 0.15)',
+    marginTop: 8,
     marginBottom: 16,
   },
   handicapText: {
@@ -388,6 +540,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  input: {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    fontSize: 16,
   },
   bioInput: {
     paddingVertical: 12,
