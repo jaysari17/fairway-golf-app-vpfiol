@@ -31,6 +31,18 @@ eas submit --platform all --profile production
 | **Android Package** | com.fairway.golftracker |
 | **Category** | Sports / Social Networking |
 
+## 🌍 Golf Course API - ACTIVE ✅
+
+| Item | Value |
+|------|-------|
+| **Provider** | golfcourseapi.com |
+| **API Key** | U2RVDJNGLFSNE5B2MAOAZGX2SM |
+| **Status** | Configured and active |
+| **Coverage** | Worldwide golf courses |
+| **File** | `utils/golfCourseApi.ts` |
+
+Users can now search for any golf course worldwide when adding rounds!
+
 ## 🎨 Brand Colors
 
 ```
@@ -61,12 +73,13 @@ Dark BG:   #000000
 
 ## 🔑 Key Features (for App Store)
 
-1. **Course Tracking** - Log every round
-2. **Smart Ratings** - Comparison-based rating system
-3. **Social Network** - Connect with friends
-4. **Personal Profile** - Golf taste profile
-5. **Discovery** - Find new courses
-6. **Progress** - Badges and achievements
+1. **Worldwide Course Search** - Search any golf course globally (NEW ✅)
+2. **Course Tracking** - Log every round
+3. **Smart Ratings** - Comparison-based rating system
+4. **Social Network** - Connect with friends
+5. **Personal Profile** - Golf taste profile
+6. **Discovery** - Find new courses
+7. **Progress** - Badges and achievements
 
 ## 📝 App Store Description (Short)
 

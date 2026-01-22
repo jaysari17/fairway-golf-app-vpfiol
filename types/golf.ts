@@ -6,10 +6,16 @@ export interface GolfCourse {
   city: string;
   state: string;
   country: string;
-  type?: 'parkland' | 'links' | 'desert' | 'mountain' | 'other';
+  type?: 'parkland' | 'links' | 'desert' | 'mountain' | 'public' | 'private' | 'resort' | 'other';
   holes?: number;
   par?: number;
   yardage?: number;
+  rating?: number; // User's rating (0-100)
+  difficulty?: string;
+  website?: string;
+  phone?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Round {

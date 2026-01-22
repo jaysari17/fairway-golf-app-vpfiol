@@ -1,8 +1,10 @@
 
 import { GolfCourse } from '@/types/golf';
 
-// Backend API base URL - will be set by the backend integration
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// Golf Course API Configuration
+// API Key for golfcourseapi.com
+const GOLF_COURSE_API_KEY = 'U2RVDJNGLFSNE5B2MAOAZGX2SM';
+const GOLF_COURSE_API_BASE_URL = 'https://api.golfcourseapi.com/v1';
 
 export interface GolfCourseApiResponse {
   id?: number;
@@ -21,7 +23,39 @@ export interface GolfCourseApiResponse {
 }
 
 /**
- * Search for golf courses worldwide using the backend API
+ * Transform Golf Course API response to our GolfCourse format
+ */
+function transformApiCourse(apiCourse: any): GolfCourse {
+  const city = apiCourse.city || '';
+  const state = apiCourse.state_or_province || apiCourse.state || '';
+  const country = apiCourse.country || '';
+  
+  // Build location string
+  const locationParts = [city, state, country].filter(Boolean);
+  const location = locationParts.join(', ');
+
+  return {
+    id: String(apiCourse.id || Math.random().toString(36).substr(2, 9)),
+    name: apiCourse.name || 'Unknown Course',
+    location: location || 'Unknown Location',
+    city: city,
+    state: state,
+    country: country,
+    type: (apiCourse.course_type?.toLowerCase() || 'public') as any,
+    holes: apiCourse.holes || 18,
+    par: apiCourse.par || 72,
+    yardage: apiCourse.yardage || 6500,
+    rating: 0, // User rating, not set yet
+    difficulty: 'Medium', // Default difficulty
+    website: apiCourse.website,
+    phone: apiCourse.phone,
+    latitude: apiCourse.latitude,
+    longitude: apiCourse.longitude,
+  };
+}
+
+/**
+ * Search for golf courses worldwide using the Golf Course API
  * @param query - Search query (course name, city, state, etc.)
  * @param limit - Maximum number of results to return (default: 20)
  * @returns Array of golf courses matching the search query
@@ -38,14 +72,15 @@ export async function searchGolfCourses(
   try {
     console.log('Golf Course Search: Searching for:', query);
     
-    // Call backend endpoint for golf course search
-    const url = `${API_BASE_URL}/api/golf-courses/search?query=${encodeURIComponent(query)}&limit=${limit}`;
+    // Build the API URL with query parameters
+    const url = `${GOLF_COURSE_API_BASE_URL}/courses?name=${encodeURIComponent(query)}&limit=${limit}`;
     
     console.log('Golf Course Search: Request URL:', url);
 
     const response = await fetch(url, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
@@ -55,14 +90,27 @@ export async function searchGolfCourses(
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Golf Course Search error:', response.status, response.statusText, errorText);
+      
+      if (response.status === 401 || response.status === 403) {
+        console.error('Golf Course API: Invalid API key or unauthorized');
+      } else if (response.status === 429) {
+        console.error('Golf Course API: Rate limit exceeded');
+      }
+      
       return [];
     }
 
     const data = await response.json();
-    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses');
+    console.log('Golf Course Search: Raw API response:', data);
+    
+    // The API might return courses in different formats, handle both
+    const courses = data.courses || data.data || data || [];
+    console.log('Golf Course Search: Found', courses.length, 'courses');
 
-    // The backend returns courses in our GolfCourse format
-    return data.courses || [];
+    // Transform API courses to our format
+    const transformedCourses = courses.map(transformApiCourse);
+    
+    return transformedCourses;
   } catch (error) {
     console.error('Error searching golf courses:', error);
     return [];
@@ -78,11 +126,12 @@ export async function getGolfCourseById(courseId: string): Promise<GolfCourse | 
   try {
     console.log('Golf Course Search: Fetching course by ID:', courseId);
     
-    const url = `${API_BASE_URL}/api/golf-courses/${courseId}`;
+    const url = `${GOLF_COURSE_API_BASE_URL}/courses/${courseId}`;
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
@@ -93,7 +142,13 @@ export async function getGolfCourseById(courseId: string): Promise<GolfCourse | 
     }
 
     const data = await response.json();
-    return data.course || null;
+    const course = data.course || data.data || data;
+    
+    if (!course) {
+      return null;
+    }
+    
+    return transformApiCourse(course);
   } catch (error) {
     console.error('Error fetching golf course:', error);
     return null;
@@ -118,11 +173,12 @@ export async function searchGolfCoursesByState(
   try {
     console.log('Golf Course Search: Searching by state:', state);
     
-    const url = `${API_BASE_URL}/api/golf-courses/search?state=${encodeURIComponent(state)}&limit=${limit}`;
+    const url = `${GOLF_COURSE_API_BASE_URL}/courses?state=${encodeURIComponent(state)}&limit=${limit}`;
     
     const response = await fetch(url, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
@@ -133,9 +189,10 @@ export async function searchGolfCoursesByState(
     }
 
     const data = await response.json();
-    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses in', state);
+    const courses = data.courses || data.data || data || [];
+    console.log('Golf Course Search: Found', courses.length, 'courses in', state);
 
-    return data.courses || [];
+    return courses.map(transformApiCourse);
   } catch (error) {
     console.error('Error searching golf courses by state:', error);
     return [];
@@ -162,7 +219,7 @@ export async function searchGolfCoursesByCity(
   try {
     console.log('Golf Course Search: Searching by city:', city, state ? `in ${state}` : '');
     
-    let url = `${API_BASE_URL}/api/golf-courses/search?city=${encodeURIComponent(city)}&limit=${limit}`;
+    let url = `${GOLF_COURSE_API_BASE_URL}/courses?city=${encodeURIComponent(city)}&limit=${limit}`;
     if (state) {
       url += `&state=${encodeURIComponent(state)}`;
     }
@@ -170,6 +227,7 @@ export async function searchGolfCoursesByCity(
     const response = await fetch(url, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
         'Content-Type': 'application/json',
       },
     });
@@ -180,11 +238,56 @@ export async function searchGolfCoursesByCity(
     }
 
     const data = await response.json();
-    console.log('Golf Course Search: Found', data.courses?.length || 0, 'courses in', city);
+    const courses = data.courses || data.data || data || [];
+    console.log('Golf Course Search: Found', courses.length, 'courses in', city);
 
-    return data.courses || [];
+    return courses.map(transformApiCourse);
   } catch (error) {
     console.error('Error searching golf courses by city:', error);
+    return [];
+  }
+}
+
+/**
+ * Search for golf courses by country
+ * @param country - Country name or code (e.g., "USA", "United Kingdom", "Australia")
+ * @param limit - Maximum number of results (default: 20)
+ * @returns Array of golf courses in the specified country
+ */
+export async function searchGolfCoursesByCountry(
+  country: string,
+  limit: number = 20
+): Promise<GolfCourse[]> {
+  if (!country || country.trim().length === 0) {
+    console.log('Golf Course Search: Empty country query');
+    return [];
+  }
+
+  try {
+    console.log('Golf Course Search: Searching by country:', country);
+    
+    const url = `${GOLF_COURSE_API_BASE_URL}/courses?country=${encodeURIComponent(country)}&limit=${limit}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error('Golf Course Search error:', response.status, response.statusText);
+      return [];
+    }
+
+    const data = await response.json();
+    const courses = data.courses || data.data || data || [];
+    console.log('Golf Course Search: Found', courses.length, 'courses in', country);
+
+    return courses.map(transformApiCourse);
+  } catch (error) {
+    console.error('Error searching golf courses by country:', error);
     return [];
   }
 }
