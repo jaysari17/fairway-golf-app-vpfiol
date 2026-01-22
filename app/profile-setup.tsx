@@ -68,38 +68,47 @@ export default function ProfileSetupScreen() {
       console.log('Creating Supabase account for:', email);
 
       // Step 1: Create Supabase auth account
-      const { error: signUpError } = await signUp(email, password, {
+      const { error: signUpError, needsEmailConfirmation } = await signUp(email, password, {
         username: username.trim(),
         phone_number: phoneNumber.trim(),
       });
 
       if (signUpError) {
         console.error('Supabase signup error:', signUpError);
-        
-        // Provide more specific error messages
-        let errorMessage = 'Failed to create account. Please try again.';
-        if (signUpError.message.includes('already registered')) {
-          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
-        } else if (signUpError.message.includes('password')) {
-          errorMessage = 'Password is too weak. Please use a stronger password.';
-        } else if (signUpError.message) {
-          errorMessage = signUpError.message;
-        }
-        
-        Alert.alert('Signup Error', errorMessage);
+        Alert.alert('Signup Error', signUpError.message || 'Failed to create account. Please try again.');
         return;
       }
 
-      console.log('Supabase auth account created successfully');
+      // Step 2: Check if email confirmation is required
+      if (needsEmailConfirmation) {
+        console.log('Email confirmation required');
+        
+        Alert.alert(
+          'Verify Your Email',
+          `We've sent a confirmation email to ${email}. Please check your inbox and click the verification link to complete your registration.\n\nAfter verifying, return to the app and sign in.`,
+          [
+            {
+              text: 'OK',
+              onPress: () => {
+                // Navigate back to login screen
+                router.replace('/login');
+              }
+            }
+          ]
+        );
+        return;
+      }
 
-      // Step 2: Save profile to database
+      console.log('Supabase auth account created successfully - no email confirmation needed');
+
+      // Step 3: Save profile to database (only if no email confirmation needed)
       try {
         const profile: UserProfile = {
           username: username.trim(),
           email: email.trim(),
           phoneNumber: phoneNumber.trim(),
           handicap: handicap ? parseFloat(handicap) : undefined,
-          displayName: username.trim(), // Use username as display name initially
+          displayName: username.trim(),
           totalRounds: 0,
           totalCourses: 0,
           contactsSynced: false,
@@ -109,16 +118,15 @@ export default function ProfileSetupScreen() {
         await StorageService.saveProfile(profile);
         console.log('Profile saved to Supabase successfully');
         
-        // Step 3: Mark onboarding as complete
+        // Step 4: Mark onboarding as complete
         await StorageService.setOnboardingComplete();
         console.log('Onboarding marked complete');
         
-        // Step 4: Navigate to contact sync screen
+        // Step 5: Navigate to contact sync screen
         router.replace('/contact-sync');
       } catch (profileError: any) {
         console.error('Error saving profile to database:', profileError);
         
-        // Provide specific error message
         let errorMessage = 'Database error saving new user';
         if (profileError.message) {
           errorMessage = `Database error: ${profileError.message}`;
@@ -132,6 +140,11 @@ export default function ProfileSetupScreen() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleBackToLogin = () => {
+    console.log('User tapped Back to Login');
+    router.back();
   };
 
   return (
@@ -244,6 +257,13 @@ export default function ProfileSetupScreen() {
               )}
             </TouchableOpacity>
 
+            <View style={styles.loginContainer}>
+              <Text style={styles.loginText}>Already have an account? </Text>
+              <TouchableOpacity onPress={handleBackToLogin} disabled={loading}>
+                <Text style={styles.loginLink}>Sign In</Text>
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.termsText}>
               By creating an account, you agree to our Terms of Service and Privacy Policy
             </Text>
@@ -332,6 +352,23 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: 18,
     fontWeight: '700',
+  },
+  loginContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  loginText: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    opacity: 0.9,
+  },
+  loginLink: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
   termsText: {
     fontSize: 12,

@@ -4,627 +4,409 @@ import { UserProfile, Round, Badge } from '@/types/golf';
 import { CourseRating } from '@/types/rating';
 import { FeedEvent, FeedComment } from '@/types/social';
 
-/**
- * Supabase Storage Service
- * 
- * This service provides methods to interact with Supabase database.
- * It replaces AsyncStorage calls with real database operations.
- * 
- * SETUP REQUIRED:
- * 1. Create tables in your Supabase project:
- *    - profiles (id, user_id, username, display_name, bio, handicap, phone_number, avatar_url, created_at, updated_at)
- *    - rounds (id, user_id, course_id, course_name, course_location, date_played, score, tee_box, yardage, review, created_at)
- *    - ratings (id, user_id, course_id, course_name, course_location, play_again_response, comparison_wins, comparison_losses, compared_course_ids, rank_position, total_courses, final_score, play_count, created_at, updated_at)
- *    - feed_events (id, user_id, event_type, course_id, round_id, rating, score, photo_url, comment, likes_count, comments_count, created_at)
- *    - feed_comments (id, event_id, user_id, text, created_at)
- *    - followers (id, follower_id, following_id, created_at)
- *    - badges (id, user_id, badge_id, badge_name, badge_description, badge_icon, earned_at)
- * 
- * 2. Set up Row Level Security (RLS) policies for each table
- * 3. Add your Supabase URL and anon key to .env file
- */
+// ============================================
+// PROFILE OPERATIONS
+// ============================================
 
-export const SupabaseStorageService = {
-  // ==================== PROFILES ====================
+export const saveProfile = async (profileData: Partial<UserProfile>): Promise<void> => {
+  console.log('Saving profile to Supabase:', profileData);
   
-  async getProfile(userId?: string): Promise<UserProfile | null> {
-    try {
-      const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
-      
-      if (!targetUserId) {
-        console.error('No user ID provided');
-        return null;
-      }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
 
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .single();
+  // Prepare profile data
+  const profile = {
+    user_id: user.id,
+    username: profileData.username,
+    display_name: profileData.displayName || profileData.username,
+    bio: profileData.bio || null,
+    handicap: profileData.handicap || null,
+    phone_number: profileData.phoneNumber || null,
+    avatar_url: profileData.avatarUrl || null,
+    updated_at: new Date().toISOString(),
+  };
 
-      if (error) {
-        // If profile doesn't exist yet, return null (not an error during signup)
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found for user:', targetUserId);
-          return null;
-        }
-        console.error('Error fetching profile:', error);
-        return null;
-      }
+  // Use upsert to handle both insert and update cases
+  // The trigger might have already created a profile, so we update it
+  const { error } = await supabase
+    .from('profiles')
+    .upsert(profile, { 
+      onConflict: 'user_id',
+      ignoreDuplicates: false 
+    });
 
-      console.log('Profile fetched from Supabase:', data?.username);
-      
-      // Get email from auth.users
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      // Map database fields to UserProfile interface
-      return {
-        id: data.id,
-        userId: data.user_id,
-        username: data.username,
-        displayName: data.display_name,
-        email: user?.email,
-        phoneNumber: data.phone_number,
-        avatar: data.avatar_url,
-        bio: data.bio,
-        handicap: data.handicap ? parseFloat(data.handicap) : undefined,
-        createdAt: data.created_at ? new Date(data.created_at) : undefined,
-        updatedAt: data.updated_at ? new Date(data.updated_at) : undefined,
-      } as UserProfile;
-    } catch (error) {
-      console.error('Error in getProfile:', error);
+  if (error) {
+    console.error('Error saving profile:', error);
+    throw error;
+  }
+
+  console.log('Profile saved successfully');
+};
+
+export const getProfile = async (userId?: string): Promise<UserProfile | null> => {
+  console.log('Fetching profile from Supabase for user:', userId || 'current user');
+  
+  let targetUserId = userId;
+  
+  if (!targetUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user');
       return null;
     }
-  },
+    targetUserId = user.id;
+  }
 
-  async saveProfile(profile: UserProfile): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .single();
 
-      // Don't save email to profiles table - it's stored in auth.users
-      // Map UserProfile fields to database column names
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          user_id: user.id,
-          username: profile.username,
-          display_name: profile.displayName || profile.username,
-          bio: profile.bio || null,
-          handicap: profile.handicap || null,
-          phone_number: profile.phoneNumber || null,
-          avatar_url: profile.avatar || null,
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
-        });
+  if (error) {
+    console.error('Error fetching profile:', error);
+    return null;
+  }
 
-      if (error) {
-        console.error('Error saving profile to Supabase:', error);
-        throw error;
-      }
+  if (!data) {
+    console.log('No profile found');
+    return null;
+  }
 
-      console.log('Profile saved to Supabase:', profile.username);
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      throw error;
-    }
-  },
+  // Map database fields to UserProfile interface
+  const profile: UserProfile = {
+    username: data.username,
+    displayName: data.display_name || data.username,
+    email: '', // Email is stored in auth.users, not profiles
+    phoneNumber: data.phone_number || '',
+    bio: data.bio || undefined,
+    handicap: data.handicap ? parseFloat(data.handicap) : undefined,
+    avatarUrl: data.avatar_url || undefined,
+    totalRounds: 0, // Will be calculated from rounds table
+    totalCourses: 0, // Will be calculated from rounds table
+    contactsSynced: false,
+  };
 
-  // ==================== ROUNDS ====================
+  console.log('Profile fetched successfully');
+  return profile;
+};
+
+// ============================================
+// ROUND OPERATIONS
+// ============================================
+
+export const saveRound = async (roundData: Omit<Round, 'id'>): Promise<void> => {
+  console.log('Saving round to Supabase:', roundData);
   
-  async getRounds(userId?: string): Promise<Round[]> {
-    try {
-      const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
-      
-      if (!targetUserId) {
-        console.error('No user ID provided');
-        return [];
-      }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
 
-      const { data, error } = await supabase
-        .from('rounds')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .order('date_played', { ascending: false });
+  const round = {
+    user_id: user.id,
+    course_id: roundData.courseId,
+    course_name: roundData.courseName,
+    course_location: roundData.courseLocation,
+    date_played: roundData.datePlayed,
+    score: roundData.score || null,
+    tee_box: roundData.teeBox || null,
+    yardage: roundData.yardage || null,
+    review: roundData.review || null,
+  };
 
-      if (error) {
-        console.error('Error fetching rounds:', error);
-        return [];
-      }
+  const { error } = await supabase
+    .from('rounds')
+    .insert(round);
 
-      console.log('Rounds fetched from Supabase:', data?.length);
-      
-      // Map database fields to Round interface
-      return data.map(round => ({
-        id: round.id,
-        courseId: round.course_id,
-        courseName: round.course_name,
-        courseLocation: round.course_location,
-        datePlayed: new Date(round.date_played),
-        score: round.score,
-        teeBox: round.tee_box,
-        yardage: round.yardage,
-        review: round.review,
-      })) as Round[];
-    } catch (error) {
-      console.error('Error in getRounds:', error);
+  if (error) {
+    console.error('Error saving round:', error);
+    throw error;
+  }
+
+  console.log('Round saved successfully');
+};
+
+export const getRounds = async (userId?: string): Promise<Round[]> => {
+  console.log('Fetching rounds from Supabase');
+  
+  let targetUserId = userId;
+  
+  if (!targetUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user');
       return [];
     }
-  },
+    targetUserId = user.id;
+  }
 
-  async saveRound(round: Round): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
+  const { data, error } = await supabase
+    .from('rounds')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .order('date_played', { ascending: false });
 
-      const { error } = await supabase
-        .from('rounds')
-        .insert({
-          id: round.id,
-          user_id: user.id,
-          course_id: round.courseId,
-          course_name: round.courseName,
-          course_location: round.courseLocation,
-          date_played: round.datePlayed,
-          score: round.score,
-          tee_box: round.teeBox,
-          yardage: round.yardage,
-          review: round.review,
-        });
+  if (error) {
+    console.error('Error fetching rounds:', error);
+    return [];
+  }
 
-      if (error) {
-        throw error;
-      }
+  const rounds: Round[] = (data || []).map((row: any) => ({
+    id: row.id,
+    courseId: row.course_id,
+    courseName: row.course_name,
+    courseLocation: row.course_location,
+    datePlayed: row.date_played,
+    score: row.score,
+    teeBox: row.tee_box,
+    yardage: row.yardage,
+    review: row.review,
+  }));
 
-      console.log('Round saved to Supabase:', round.id);
-    } catch (error) {
-      console.error('Error saving round:', error);
-      throw error;
-    }
-  },
+  console.log(`Fetched ${rounds.length} rounds`);
+  return rounds;
+};
 
-  async updateRound(roundId: string, updatedRound: Round): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('rounds')
-        .update({
-          course_id: updatedRound.courseId,
-          course_name: updatedRound.courseName,
-          course_location: updatedRound.courseLocation,
-          date_played: updatedRound.datePlayed,
-          score: updatedRound.score,
-          tee_box: updatedRound.teeBox,
-          yardage: updatedRound.yardage,
-          review: updatedRound.review,
-        })
-        .eq('id', roundId);
+// ============================================
+// RATING OPERATIONS
+// ============================================
 
-      if (error) {
-        throw error;
-      }
-
-      console.log('Round updated in Supabase:', roundId);
-    } catch (error) {
-      console.error('Error updating round:', error);
-      throw error;
-    }
-  },
-
-  async deleteRound(roundId: string): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('rounds')
-        .delete()
-        .eq('id', roundId);
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Round deleted from Supabase:', roundId);
-    } catch (error) {
-      console.error('Error deleting round:', error);
-      throw error;
-    }
-  },
-
-  // ==================== RATINGS ====================
+export const saveRating = async (ratingData: CourseRating): Promise<void> => {
+  console.log('Saving rating to Supabase:', ratingData);
   
-  async getRatings(userId?: string): Promise<CourseRating[]> {
-    try {
-      const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
-      
-      if (!targetUserId) {
-        console.error('No user ID provided');
-        return [];
-      }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
 
-      const { data, error } = await supabase
-        .from('ratings')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .order('created_at', { ascending: false });
+  const rating = {
+    user_id: user.id,
+    course_id: ratingData.courseId,
+    course_name: ratingData.courseName,
+    course_location: ratingData.courseLocation,
+    play_again_response: ratingData.playAgainResponse || null,
+    comparison_wins: ratingData.comparisonWins || 0,
+    comparison_losses: ratingData.comparisonLosses || 0,
+    compared_course_ids: ratingData.comparedCourseIds || [],
+    rank_position: ratingData.rankPosition || null,
+    total_courses: ratingData.totalCourses || null,
+    final_score: ratingData.finalScore || null,
+    play_count: ratingData.playCount || 1,
+  };
 
-      if (error) {
-        console.error('Error fetching ratings:', error);
-        return [];
-      }
+  const { error } = await supabase
+    .from('ratings')
+    .upsert(rating, { 
+      onConflict: 'user_id,course_id',
+      ignoreDuplicates: false 
+    });
 
-      console.log('Ratings fetched from Supabase:', data?.length);
-      
-      // Map database fields to CourseRating interface
-      return data.map(rating => ({
-        id: rating.id,
-        userId: rating.user_id,
-        courseId: rating.course_id,
-        courseName: rating.course_name,
-        courseLocation: rating.course_location,
-        playAgainResponse: rating.play_again_response,
-        comparisonWins: rating.comparison_wins,
-        comparisonLosses: rating.comparison_losses,
-        comparedCourseIds: rating.compared_course_ids || [],
-        rankPosition: rating.rank_position,
-        totalCourses: rating.total_courses,
-        finalScore: rating.final_score ? parseFloat(rating.final_score) : undefined,
-        playCount: rating.play_count,
-        createdAt: rating.created_at ? new Date(rating.created_at) : undefined,
-        updatedAt: rating.updated_at ? new Date(rating.updated_at) : undefined,
-      })) as CourseRating[];
-    } catch (error) {
-      console.error('Error in getRatings:', error);
+  if (error) {
+    console.error('Error saving rating:', error);
+    throw error;
+  }
+
+  console.log('Rating saved successfully');
+};
+
+export const getRatings = async (userId?: string): Promise<CourseRating[]> => {
+  console.log('Fetching ratings from Supabase');
+  
+  let targetUserId = userId;
+  
+  if (!targetUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user');
       return [];
     }
-  },
+    targetUserId = user.id;
+  }
 
-  async saveRating(rating: CourseRating): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
+  const { data, error } = await supabase
+    .from('ratings')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .order('created_at', { ascending: false });
 
-      const { error } = await supabase
-        .from('ratings')
-        .upsert({
-          id: rating.id,
-          user_id: user.id,
-          course_id: rating.courseId,
-          course_name: rating.courseName,
-          course_location: rating.courseLocation,
-          play_again_response: rating.playAgainResponse,
-          comparison_wins: rating.comparisonWins,
-          comparison_losses: rating.comparisonLosses,
-          compared_course_ids: rating.comparedCourseIds,
-          rank_position: rating.rankPosition,
-          total_courses: rating.totalCourses,
-          final_score: rating.finalScore,
-          play_count: rating.playCount,
-          updated_at: new Date().toISOString(),
-        });
+  if (error) {
+    console.error('Error fetching ratings:', error);
+    return [];
+  }
 
-      if (error) {
-        throw error;
-      }
+  const ratings: CourseRating[] = (data || []).map((row: any) => ({
+    courseId: row.course_id,
+    courseName: row.course_name,
+    courseLocation: row.course_location,
+    playAgainResponse: row.play_again_response,
+    comparisonWins: row.comparison_wins || 0,
+    comparisonLosses: row.comparison_losses || 0,
+    comparedCourseIds: row.compared_course_ids || [],
+    rankPosition: row.rank_position,
+    totalCourses: row.total_courses,
+    finalScore: row.final_score ? parseFloat(row.final_score) : undefined,
+    playCount: row.play_count || 1,
+  }));
 
-      console.log('Rating saved to Supabase:', rating.id);
-    } catch (error) {
-      console.error('Error saving rating:', error);
-      throw error;
-    }
-  },
+  console.log(`Fetched ${ratings.length} ratings`);
+  return ratings;
+};
 
-  // ==================== SOCIAL FEED ====================
+// ============================================
+// SOCIAL FEED OPERATIONS
+// ============================================
+
+export const saveFeedEvent = async (eventData: Omit<FeedEvent, 'id' | 'timestamp'>): Promise<void> => {
+  console.log('Saving feed event to Supabase:', eventData);
   
-  async getFeedEvents(limit = 50, offset = 0): Promise<FeedEvent[]> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        console.error('No authenticated user');
-        return [];
-      }
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
 
-      // Get feed events from users the current user follows
-      const { data, error } = await supabase
-        .from('feed_events')
-        .select(`
-          *,
-          profiles!feed_events_user_id_fkey (username, display_name, avatar_url)
-        `)
-        .order('created_at', { ascending: false })
-        .range(offset, offset + limit - 1);
+  const event = {
+    user_id: user.id,
+    event_type: eventData.type,
+    course_id: eventData.courseId || null,
+    course_name: eventData.courseName || null,
+    course_location: eventData.courseLocation || null,
+    round_id: eventData.roundId || null,
+    rating: eventData.rating || null,
+    score: eventData.score || null,
+    photo_url: eventData.photoUrl || null,
+    comment: eventData.comment || null,
+    likes_count: 0,
+    comments_count: 0,
+  };
 
-      if (error) {
-        console.error('Error fetching feed events:', error);
-        return [];
-      }
+  const { error } = await supabase
+    .from('feed_events')
+    .insert(event);
 
-      console.log('Feed events fetched from Supabase:', data?.length);
-      
-      // Map database fields to FeedEvent interface
-      return data.map(event => {
-        const profile = Array.isArray(event.profiles) ? event.profiles[0] : event.profiles;
-        return {
-          id: event.id,
-          userId: event.user_id,
-          username: profile?.username || 'Unknown User',
-          displayName: profile?.display_name || profile?.username || 'Unknown User',
-          userAvatar: profile?.avatar_url,
-          type: event.event_type as FeedEventType,
-          timestamp: event.created_at ? new Date(event.created_at) : new Date(),
-          courseId: event.course_id,
-          courseName: event.course_name,
-          courseLocation: event.course_location,
-          rating: event.rating ? parseFloat(event.rating) : undefined,
-          score: event.score,
-          photo: event.photo_url,
-          comment: event.comment,
-          likes: [], // TODO: Implement likes tracking
-          comments: [], // Comments are fetched separately
-        };
-      }) as FeedEvent[];
-    } catch (error) {
-      console.error('Error in getFeedEvents:', error);
+  if (error) {
+    console.error('Error saving feed event:', error);
+    throw error;
+  }
+
+  console.log('Feed event saved successfully');
+};
+
+export const getFeedEvents = async (): Promise<FeedEvent[]> => {
+  console.log('Fetching feed events from Supabase');
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error('No authenticated user');
+    return [];
+  }
+
+  // Get feed events from followed users and self
+  const { data, error } = await supabase
+    .from('feed_events')
+    .select(`
+      *,
+      profiles:user_id (username, display_name, avatar_url)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('Error fetching feed events:', error);
+    return [];
+  }
+
+  const events: FeedEvent[] = (data || []).map((row: any) => ({
+    id: row.id,
+    userId: row.user_id,
+    username: row.profiles?.username || 'Unknown',
+    displayName: row.profiles?.display_name || row.profiles?.username || 'Unknown',
+    avatarUrl: row.profiles?.avatar_url,
+    type: row.event_type,
+    courseId: row.course_id,
+    courseName: row.course_name,
+    courseLocation: row.course_location,
+    roundId: row.round_id,
+    rating: row.rating ? parseFloat(row.rating) : undefined,
+    score: row.score,
+    photoUrl: row.photo_url,
+    comment: row.comment,
+    timestamp: new Date(row.created_at),
+    likes: row.likes_count || 0,
+    comments: [],
+  }));
+
+  console.log(`Fetched ${events.length} feed events`);
+  return events;
+};
+
+// ============================================
+// BADGE OPERATIONS
+// ============================================
+
+export const saveBadge = async (badgeData: Omit<Badge, 'earnedAt'>): Promise<void> => {
+  console.log('Saving badge to Supabase:', badgeData);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const badge = {
+    user_id: user.id,
+    badge_id: badgeData.id,
+    badge_name: badgeData.name,
+    badge_description: badgeData.description,
+    badge_icon: badgeData.icon,
+  };
+
+  const { error } = await supabase
+    .from('badges')
+    .insert(badge);
+
+  if (error) {
+    console.error('Error saving badge:', error);
+    throw error;
+  }
+
+  console.log('Badge saved successfully');
+};
+
+export const getBadges = async (userId?: string): Promise<Badge[]> => {
+  console.log('Fetching badges from Supabase');
+  
+  let targetUserId = userId;
+  
+  if (!targetUserId) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.error('No authenticated user');
       return [];
     }
-  },
+    targetUserId = user.id;
+  }
 
-  async createFeedEvent(event: FeedEvent): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .eq('user_id', targetUserId)
+    .order('earned_at', { ascending: false });
 
-      const { error } = await supabase
-        .from('feed_events')
-        .insert({
-          id: event.id,
-          user_id: user.id,
-          event_type: event.type,
-          course_id: event.courseId,
-          course_name: event.courseName,
-          course_location: event.courseLocation,
-          rating: event.rating,
-          score: event.score,
-          photo_url: event.photo,
-          comment: event.comment,
-          likes_count: 0,
-          comments_count: 0,
-        });
+  if (error) {
+    console.error('Error fetching badges:', error);
+    return [];
+  }
 
-      if (error) {
-        throw error;
-      }
+  const badges: Badge[] = (data || []).map((row: any) => ({
+    id: row.badge_id,
+    name: row.badge_name,
+    description: row.badge_description,
+    icon: row.badge_icon,
+    earnedAt: new Date(row.earned_at),
+  }));
 
-      console.log('Feed event created in Supabase:', event.id);
-    } catch (error) {
-      console.error('Error creating feed event:', error);
-      throw error;
-    }
-  },
-
-  async likeFeedEvent(eventId: string): Promise<void> {
-    try {
-      const { error } = await supabase.rpc('increment_likes', {
-        event_id: eventId,
-      });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Feed event liked:', eventId);
-    } catch (error) {
-      console.error('Error liking feed event:', error);
-      throw error;
-    }
-  },
-
-  // ==================== FOLLOWERS ====================
-  
-  async followUser(targetUserId: string): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-
-      const { error } = await supabase
-        .from('followers')
-        .insert({
-          follower_id: user.id,
-          following_id: targetUserId,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('User followed:', targetUserId);
-    } catch (error) {
-      console.error('Error following user:', error);
-      throw error;
-    }
-  },
-
-  async unfollowUser(targetUserId: string): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-
-      const { error } = await supabase
-        .from('followers')
-        .delete()
-        .eq('follower_id', user.id)
-        .eq('following_id', targetUserId);
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('User unfollowed:', targetUserId);
-    } catch (error) {
-      console.error('Error unfollowing user:', error);
-      throw error;
-    }
-  },
-
-  async getFollowers(userId: string): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('followers')
-        .select(`
-          follower_id,
-          profiles:follower_id (username, display_name, avatar_url)
-        `)
-        .eq('following_id', userId);
-
-      if (error) {
-        console.error('Error fetching followers:', error);
-        return [];
-      }
-
-      console.log('Followers fetched from Supabase:', data?.length);
-      return data || [];
-    } catch (error) {
-      console.error('Error in getFollowers:', error);
-      return [];
-    }
-  },
-
-  async getFollowing(userId: string): Promise<any[]> {
-    try {
-      const { data, error } = await supabase
-        .from('followers')
-        .select(`
-          following_id,
-          profiles:following_id (username, display_name, avatar_url)
-        `)
-        .eq('follower_id', userId);
-
-      if (error) {
-        console.error('Error fetching following:', error);
-        return [];
-      }
-
-      console.log('Following fetched from Supabase:', data?.length);
-      return data || [];
-    } catch (error) {
-      console.error('Error in getFollowing:', error);
-      return [];
-    }
-  },
-
-  // ==================== BADGES ====================
-  
-  async getBadges(userId?: string): Promise<Badge[]> {
-    try {
-      const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
-      
-      if (!targetUserId) {
-        console.error('No user ID provided');
-        return [];
-      }
-
-      const { data, error } = await supabase
-        .from('badges')
-        .select('*')
-        .eq('user_id', targetUserId)
-        .order('earned_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching badges:', error);
-        return [];
-      }
-
-      console.log('Badges fetched from Supabase:', data?.length);
-      
-      // Map database fields to Badge interface
-      return data.map(badge => ({
-        id: badge.id,
-        userId: badge.user_id,
-        badgeId: badge.badge_id,
-        name: badge.badge_name,
-        description: badge.badge_description,
-        icon: badge.badge_icon,
-        earned: !!badge.earned_at,
-        earnedAt: badge.earned_at ? new Date(badge.earned_at) : undefined,
-      })) as Badge[];
-    } catch (error) {
-      console.error('Error in getBadges:', error);
-      return [];
-    }
-  },
-
-  async awardBadge(badge: Badge): Promise<void> {
-    try {
-      const user = (await supabase.auth.getUser()).data.user;
-      
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
-
-      const { error } = await supabase
-        .from('badges')
-        .insert({
-          user_id: user.id,
-          badge_id: badge.id,
-          badge_name: badge.name,
-          badge_description: badge.description,
-          badge_icon: badge.icon,
-          earned_at: badge.earnedAt,
-        });
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('Badge awarded in Supabase:', badge.name);
-    } catch (error) {
-      console.error('Error awarding badge:', error);
-      throw error;
-    }
-  },
-
-  // ==================== FILE UPLOAD ====================
-  
-  async uploadAvatar(file: File | Blob, userId: string): Promise<string> {
-    try {
-      const fileExt = 'jpg';
-      const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file);
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-      const { data } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
-
-      console.log('Avatar uploaded to Supabase:', data.publicUrl);
-      return data.publicUrl;
-    } catch (error) {
-      console.error('Error uploading avatar:', error);
-      throw error;
-    }
-  },
+  console.log(`Fetched ${badges.length} badges`);
+  return badges;
 };

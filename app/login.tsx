@@ -30,7 +30,7 @@ function resolveImageSource(source: string | number | ImageSourcePropType | unde
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { signIn } = useSupabaseAuth();
+  const { signIn, resendConfirmationEmail } = useSupabaseAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,26 @@ export default function LoginScreen() {
 
       if (error) {
         console.error('Login error:', error);
-        Alert.alert('Login Failed', error.message || 'Invalid email or password');
+        
+        // Check if it's an email confirmation issue
+        if (error.message && error.message.includes('verify your email')) {
+          Alert.alert(
+            'Email Not Verified',
+            error.message,
+            [
+              {
+                text: 'Resend Email',
+                onPress: () => handleResendConfirmation(),
+              },
+              {
+                text: 'OK',
+                style: 'cancel',
+              },
+            ]
+          );
+        } else {
+          Alert.alert('Login Failed', error.message || 'Invalid email or password');
+        }
         return;
       }
 
@@ -65,6 +84,34 @@ export default function LoginScreen() {
     } catch (error) {
       console.error('Error during login:', error);
       Alert.alert('Error', 'Failed to login. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendConfirmation = async () => {
+    if (!email.trim()) {
+      Alert.alert('Email Required', 'Please enter your email address');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log('Resending confirmation email to:', email);
+      
+      const { error } = await resendConfirmationEmail(email);
+      
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to resend confirmation email');
+      } else {
+        Alert.alert(
+          'Email Sent',
+          `A new confirmation email has been sent to ${email}. Please check your inbox and click the verification link.`
+        );
+      }
+    } catch (error) {
+      console.error('Error resending confirmation:', error);
+      Alert.alert('Error', 'Failed to resend confirmation email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -132,6 +179,16 @@ export default function LoginScreen() {
                   editable={!loading}
                 />
               </View>
+
+              <TouchableOpacity
+                onPress={handleResendConfirmation}
+                style={styles.forgotPasswordButton}
+                disabled={loading}
+              >
+                <Text style={styles.forgotPasswordText}>
+                  Didn&apos;t receive confirmation email?
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -221,6 +278,16 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  forgotPasswordButton: {
+    alignSelf: 'flex-end',
+    marginTop: 8,
+  },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    opacity: 0.8,
+    textDecorationLine: 'underline',
   },
   loginButton: {
     backgroundColor: '#FFFFFF',
