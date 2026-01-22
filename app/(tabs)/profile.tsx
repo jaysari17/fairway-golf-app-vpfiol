@@ -102,6 +102,39 @@ export default function ProfileScreen() {
     router.push('/modal');
   };
 
+  const handleCoursesPlayed = () => {
+    console.log('User tapped Courses Played button');
+    router.push({
+      pathname: '/user-courses',
+      params: {
+        userId: profile?.username || '',
+        userName: profile?.username || '',
+      },
+    });
+  };
+
+  const handleFollowers = () => {
+    console.log('User tapped Followers button');
+    router.push({
+      pathname: '/user-followers',
+      params: {
+        userId: profile?.username || '',
+        userName: profile?.username || '',
+      },
+    });
+  };
+
+  const handleFollowing = () => {
+    console.log('User tapped Following button');
+    router.push({
+      pathname: '/user-following',
+      params: {
+        userId: profile?.username || '',
+        userName: profile?.username || '',
+      },
+    });
+  };
+
   if (!profile || !editedProfile) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -129,6 +162,10 @@ export default function ProfileScreen() {
     if (score >= 40) return '#F97316';
     return '#EF4444';
   };
+
+  const coursesPlayedCount = ratedCourses.length;
+  const followersCount = 0;
+  const followingCount = 0;
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.colors.background }]} edges={['top']}>
@@ -189,7 +226,7 @@ export default function ProfileScreen() {
               ) : (
                 <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
                   <Text style={styles.avatarText}>
-                    {editedProfile.name.charAt(0).toUpperCase()}
+                    {editedProfile.username.charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -208,24 +245,6 @@ export default function ProfileScreen() {
 
           {isEditing ? (
             <View style={styles.editForm}>
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Name</Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      backgroundColor: theme.dark ? '#1A1A1A' : '#FAFAFA',
-                      color: theme.colors.text,
-                      borderColor: theme.colors.border,
-                    },
-                  ]}
-                  value={editedProfile.name}
-                  onChangeText={(text) => setEditedProfile({ ...editedProfile, name: text })}
-                  placeholder="Your name"
-                  placeholderTextColor={theme.dark ? '#9CA3AF' : '#6B7280'}
-                />
-              </View>
-
               <View style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Username</Text>
                 <TextInput
@@ -293,9 +312,6 @@ export default function ProfileScreen() {
           ) : (
             <View style={styles.profileInfo}>
               <Text style={[styles.profileName, { color: theme.colors.text }]}>
-                {profile.name}
-              </Text>
-              <Text style={[styles.profileUsername, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
                 @{profile.username}
               </Text>
               {profile.bio && (
@@ -312,6 +328,94 @@ export default function ProfileScreen() {
               )}
             </View>
           )}
+        </View>
+
+        <View style={styles.socialButtonsSection}>
+          <TouchableOpacity
+            style={[
+              styles.socialButton,
+              {
+                backgroundColor: theme.colors.card,
+                borderColor: theme.colors.border,
+              },
+            ]}
+            onPress={handleCoursesPlayed}
+          >
+            <IconSymbol
+              ios_icon_name="flag.fill"
+              android_material_icon_name="location-on"
+              size={24}
+              color={colors.primary}
+            />
+            <View style={styles.socialButtonTextContainer}>
+              <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
+                {coursesPlayedCount}
+              </Text>
+              <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
+                Courses Played
+              </Text>
+            </View>
+            <IconSymbol
+              ios_icon_name="chevron.right"
+              android_material_icon_name="arrow-forward"
+              size={20}
+              color={theme.dark ? '#9CA3AF' : '#6B7280'}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.socialButtonsRow}>
+            <TouchableOpacity
+              style={[
+                styles.socialButtonHalf,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+              onPress={handleFollowers}
+            >
+              <IconSymbol
+                ios_icon_name="person.2.fill"
+                android_material_icon_name="group"
+                size={24}
+                color={colors.primary}
+              />
+              <View style={styles.socialButtonTextContainer}>
+                <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
+                  {followersCount}
+                </Text>
+                <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
+                  Followers
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.socialButtonHalf,
+                {
+                  backgroundColor: theme.colors.card,
+                  borderColor: theme.colors.border,
+                },
+              ]}
+              onPress={handleFollowing}
+            >
+              <IconSymbol
+                ios_icon_name="person.fill.checkmark"
+                android_material_icon_name="person"
+                size={24}
+                color={colors.primary}
+              />
+              <View style={styles.socialButtonTextContainer}>
+                <Text style={[styles.socialButtonCount, { color: theme.colors.text }]}>
+                  {followingCount}
+                </Text>
+                <Text style={[styles.socialButtonLabel, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
+                  Following
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.statsSection}>
@@ -380,45 +484,68 @@ export default function ProfileScreen() {
             <View style={styles.coursesList}>
               {ratedCourses
                 .sort((a, b) => b.finalScore - a.finalScore)
-                .map((rating, index) => (
-                  <View
-                    key={rating.courseId}
-                    style={[
-                      styles.courseItem,
-                      {
-                        backgroundColor: theme.colors.card,
-                        borderColor: theme.colors.border,
-                      },
-                    ]}
-                  >
-                    <View style={styles.courseRank}>
-                      <Text style={[styles.courseRankText, { color: theme.colors.text }]}>
-                        #{index + 1}
-                      </Text>
+                .slice(0, 5)
+                .map((rating, index) => {
+                  const rankNumber = index + 1;
+                  const scoreColor = getScoreColor(rating.finalScore);
+                  const playCountText = `Played ${rating.playCount} ${rating.playCount === 1 ? 'time' : 'times'}`;
+                  
+                  return (
+                    <View
+                      key={rating.courseId}
+                      style={[
+                        styles.courseItem,
+                        {
+                          backgroundColor: theme.colors.card,
+                          borderColor: theme.colors.border,
+                        },
+                      ]}
+                    >
+                      <View style={styles.courseRank}>
+                        <Text style={[styles.courseRankText, { color: theme.colors.text }]}>
+                          #{rankNumber}
+                        </Text>
+                      </View>
+                      <View style={styles.courseInfo}>
+                        <Text style={[styles.courseName, { color: theme.colors.text }]}>
+                          {rating.courseName}
+                        </Text>
+                        <Text style={[styles.courseLocation, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
+                          {rating.courseLocation}
+                        </Text>
+                        <Text style={[styles.coursePlayCount, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
+                          {playCountText}
+                        </Text>
+                      </View>
+                      <View style={styles.courseScore}>
+                        <Text
+                          style={[
+                            styles.courseScoreText,
+                            { color: scoreColor },
+                          ]}
+                        >
+                          {rating.finalScore}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.courseInfo}>
-                      <Text style={[styles.courseName, { color: theme.colors.text }]}>
-                        {rating.courseName}
-                      </Text>
-                      <Text style={[styles.courseLocation, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                        {rating.courseLocation}
-                      </Text>
-                      <Text style={[styles.coursePlayCount, { color: theme.dark ? '#9CA3AF' : '#6B7280' }]}>
-                        Played {rating.playCount} {rating.playCount === 1 ? 'time' : 'times'}
-                      </Text>
-                    </View>
-                    <View style={styles.courseScore}>
-                      <Text
-                        style={[
-                          styles.courseScoreText,
-                          { color: getScoreColor(rating.finalScore) },
-                        ]}
-                      >
-                        {rating.finalScore}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
+              {ratedCourses.length > 5 && (
+                <TouchableOpacity
+                  style={[styles.viewAllButton, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}
+                  onPress={handleCoursesPlayed}
+                >
+                  <Text style={[styles.viewAllButtonText, { color: colors.primary }]}>
+                    View All {ratedCourses.length} Courses
+                  </Text>
+                  <IconSymbol
+                    ios_icon_name="chevron.right"
+                    android_material_icon_name="arrow-forward"
+                    size={20}
+                    color={colors.primary}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </View>
@@ -568,9 +695,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
   },
-  profileUsername: {
-    fontSize: 16,
-  },
   profileBio: {
     fontSize: 15,
     textAlign: 'center',
@@ -609,6 +733,44 @@ const styles = StyleSheet.create({
   bioInput: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  socialButtonsSection: {
+    paddingHorizontal: 20,
+    marginTop: 8,
+    gap: 12,
+  },
+  socialButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  socialButtonsRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  socialButtonHalf: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  socialButtonTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  socialButtonCount: {
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  socialButtonLabel: {
+    fontSize: 13,
+    fontWeight: '600',
   },
   statsSection: {
     paddingHorizontal: 20,
@@ -714,6 +876,19 @@ const styles = StyleSheet.create({
   courseScoreText: {
     fontSize: 24,
     fontWeight: '800',
+  },
+  viewAllButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  viewAllButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
   badgesSection: {
     paddingHorizontal: 20,
