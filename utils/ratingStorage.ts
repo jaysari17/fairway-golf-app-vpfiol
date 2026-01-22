@@ -2,6 +2,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { CourseRating, RatingTrigger } from '@/types/rating';
 
+// TODO: Backend Integration - This file uses AsyncStorage for local rating data
+// Once backend is ready, replace these methods with API calls from utils/api.ts
+
 const STORAGE_KEYS = {
   RATINGS: '@fairway_ratings',
   RATING_TRIGGERS: '@fairway_rating_triggers',
@@ -13,6 +16,8 @@ export const RatingStorageService = {
   // Ratings
   async getRatings(): Promise<CourseRating[]> {
     try {
+      // TODO: Backend Integration - GET /api/ratings
+      // Returns all ratings for the current user
       const data = await AsyncStorage.getItem(STORAGE_KEYS.RATINGS);
       return data ? JSON.parse(data) : [];
     } catch (error) {
@@ -23,13 +28,18 @@ export const RatingStorageService = {
 
   async saveRating(rating: CourseRating): Promise<void> {
     try {
+      // TODO: Backend Integration - POST /api/ratings
+      // Body: { courseId, playAgainResponse, comparisonWins, comparisonLosses, comparedCourseIds, rankPosition, totalCourses, finalScore }
+      // Backend will also create a feed event automatically
       const ratings = await this.getRatings();
       const existingIndex = ratings.findIndex(r => r.courseId === rating.courseId);
       
       if (existingIndex !== -1) {
         ratings[existingIndex] = rating;
+        console.log('Rating updated locally:', rating.courseName);
       } else {
         ratings.push(rating);
+        console.log('Rating saved locally:', rating.courseName);
       }
       
       await AsyncStorage.setItem(STORAGE_KEYS.RATINGS, JSON.stringify(ratings));
@@ -41,6 +51,8 @@ export const RatingStorageService = {
 
   async getRatingForCourse(courseId: string): Promise<CourseRating | null> {
     try {
+      // TODO: Backend Integration - GET /api/ratings/course/:courseId
+      // Returns rating for specific course or null
       const ratings = await this.getRatings();
       return ratings.find(r => r.courseId === courseId) || null;
     } catch (error) {
@@ -52,6 +64,8 @@ export const RatingStorageService = {
   // Rating Triggers
   async getTriggers(): Promise<RatingTrigger[]> {
     try {
+      // TODO: Backend Integration - Rating triggers might be handled server-side
+      // Or kept client-side for better UX
       const data = await AsyncStorage.getItem(STORAGE_KEYS.RATING_TRIGGERS);
       return data ? JSON.parse(data) : [];
     } catch (error) {
@@ -65,6 +79,7 @@ export const RatingStorageService = {
       const triggers = await this.getTriggers();
       triggers.push(trigger);
       await AsyncStorage.setItem(STORAGE_KEYS.RATING_TRIGGERS, JSON.stringify(triggers));
+      console.log('Rating trigger added:', trigger.courseName);
     } catch (error) {
       console.error('Error adding trigger:', error);
       throw error;
@@ -90,6 +105,7 @@ export const RatingStorageService = {
           : t
       );
       await AsyncStorage.setItem(STORAGE_KEYS.RATING_TRIGGERS, JSON.stringify(updatedTriggers));
+      console.log('Rating trigger completed for course:', courseId);
     } catch (error) {
       console.error('Error completing trigger:', error);
       throw error;
@@ -130,6 +146,7 @@ export const RatingStorageService = {
   async markAppReviewRequested(): Promise<void> {
     try {
       await AsyncStorage.setItem(STORAGE_KEYS.APP_REVIEW_REQUESTED, 'true');
+      console.log('App review marked as requested');
     } catch (error) {
       console.error('Error marking app review requested:', error);
       throw error;
