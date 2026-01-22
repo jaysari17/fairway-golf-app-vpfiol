@@ -22,7 +22,8 @@
       "ios": {
         "distribution": "store",
         "autoIncrement": true,
-        "appleTeamId": "JS45B47FNT"
+        "appleTeamId": "JS45B47FNT",
+        "ascAppId": "6758104620"
       },
       "android": {
         "distribution": "store",
@@ -33,7 +34,9 @@
   "submit": {
     "production": {
       "ios": {
+        "appleId": "your-apple-id@email.com",
         "appleTeamId": "JS45B47FNT",
+        "ascAppId": "6758104620",
         "ascApiKeyPath": "./AuthKey_XXXXXXXXXX.p8",
         "ascApiKeyIssuerId": "YOUR_ISSUER_ID",
         "ascApiKeyId": "YOUR_KEY_ID"
