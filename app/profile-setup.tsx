@@ -67,7 +67,7 @@ export default function ProfileSetupScreen() {
       setLoading(true);
       console.log('Creating Supabase account for:', email);
 
-      // Create Supabase account
+      // Step 1: Create Supabase auth account
       const { error: signUpError } = await signUp(email, password, {
         username: username.trim(),
         phone_number: phoneNumber.trim(),
@@ -75,35 +75,59 @@ export default function ProfileSetupScreen() {
 
       if (signUpError) {
         console.error('Supabase signup error:', signUpError);
-        Alert.alert('Signup Error', signUpError.message || 'Failed to create account. Please try again.');
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to create account. Please try again.';
+        if (signUpError.message.includes('already registered')) {
+          errorMessage = 'This email is already registered. Please use a different email or try logging in.';
+        } else if (signUpError.message.includes('password')) {
+          errorMessage = 'Password is too weak. Please use a stronger password.';
+        } else if (signUpError.message) {
+          errorMessage = signUpError.message;
+        }
+        
+        Alert.alert('Signup Error', errorMessage);
         return;
       }
 
-      console.log('Supabase account created successfully');
+      console.log('Supabase auth account created successfully');
 
-      // Save profile to Supabase
-      const profile: UserProfile = {
-        username: username.trim(),
-        email: email.trim(),
-        phoneNumber: phoneNumber.trim(),
-        handicap: handicap ? parseFloat(handicap) : undefined,
-        totalRounds: 0,
-        totalCourses: 0,
-        contactsSynced: false,
-      };
+      // Step 2: Save profile to database
+      try {
+        const profile: UserProfile = {
+          username: username.trim(),
+          email: email.trim(),
+          phoneNumber: phoneNumber.trim(),
+          handicap: handicap ? parseFloat(handicap) : undefined,
+          totalRounds: 0,
+          totalCourses: 0,
+          contactsSynced: false,
+        };
 
-      await StorageService.saveProfile(profile);
-      console.log('Profile saved to Supabase');
-      
-      // Mark onboarding as complete
-      await StorageService.setOnboardingComplete();
-      console.log('Onboarding marked complete');
-      
-      // Navigate to contact sync screen
-      router.replace('/contact-sync');
-    } catch (error) {
-      console.error('Error during profile setup:', error);
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+        console.log('Saving profile to database:', profile);
+        await StorageService.saveProfile(profile);
+        console.log('Profile saved to Supabase successfully');
+        
+        // Step 3: Mark onboarding as complete
+        await StorageService.setOnboardingComplete();
+        console.log('Onboarding marked complete');
+        
+        // Step 4: Navigate to contact sync screen
+        router.replace('/contact-sync');
+      } catch (profileError: any) {
+        console.error('Error saving profile to database:', profileError);
+        
+        // Provide specific error message
+        let errorMessage = 'Database error saving new user';
+        if (profileError.message) {
+          errorMessage = `Database error: ${profileError.message}`;
+        }
+        
+        Alert.alert('Signup Error', errorMessage);
+      }
+    } catch (error: any) {
+      console.error('Unexpected error during profile setup:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }

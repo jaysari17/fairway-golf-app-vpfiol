@@ -48,7 +48,14 @@ export const SupabaseStorageService = {
       }
 
       console.log('Profile fetched from Supabase:', data?.username);
-      return data as UserProfile;
+      
+      // Get email from auth.users
+      const user = (await supabase.auth.getUser()).data.user;
+      
+      return {
+        ...data,
+        email: user?.email,
+      } as UserProfile;
     } catch (error) {
       console.error('Error in getProfile:', error);
       return null;
@@ -63,6 +70,7 @@ export const SupabaseStorageService = {
         throw new Error('No authenticated user');
       }
 
+      // Don't save email to profiles table - it's stored in auth.users
       const { error } = await supabase
         .from('profiles')
         .upsert({
@@ -74,9 +82,12 @@ export const SupabaseStorageService = {
           phone_number: profile.phoneNumber,
           avatar_url: profile.avatar,
           updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
         });
 
       if (error) {
+        console.error('Error saving profile to Supabase:', error);
         throw error;
       }
 
