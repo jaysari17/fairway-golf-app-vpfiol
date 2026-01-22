@@ -30,8 +30,8 @@
   "submit": {
     "production": {
       "ios": {
-        "appleId": "sarijason@yahoo.com",
-        "ascAppId": "sarijason@yahoo.com",
+        "appleId": "sarijason@icloud.com",
+        "ascAppId": "sarijason@icloud.com",
         "appleTeamId": "JS45B47FNT"
       },
       "android": {
