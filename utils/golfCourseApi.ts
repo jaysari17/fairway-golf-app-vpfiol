@@ -35,7 +35,7 @@ function transformApiCourse(apiCourse: any): GolfCourse {
   const location = locationParts.join(', ');
 
   return {
-    id: String(apiCourse.id || Math.random().toString(36).substr(2, 9)),
+    id: `api-${apiCourse.id || Math.random().toString(36).substr(2, 9)}`,
     name: apiCourse.name || 'Unknown Course',
     location: location || 'Unknown Location',
     city: city,
@@ -71,6 +71,7 @@ export async function searchGolfCourses(
 
   try {
     console.log('Golf Course Search: Searching for:', query);
+    console.log('Golf Course Search: API Key present:', !!GOLF_COURSE_API_KEY);
     
     // Build the API URL with query parameters
     const url = `${GOLF_COURSE_API_BASE_URL}/courses?name=${encodeURIComponent(query)}&limit=${limit}`;
@@ -86,33 +87,56 @@ export async function searchGolfCourses(
     });
 
     console.log('Golf Course Search: Response status:', response.status);
+    console.log('Golf Course Search: Response ok:', response.ok);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Golf Course Search error:', response.status, response.statusText, errorText);
+      console.error('Golf Course Search API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        errorBody: errorText,
+      });
       
       if (response.status === 401 || response.status === 403) {
         console.error('Golf Course API: Invalid API key or unauthorized');
       } else if (response.status === 429) {
         console.error('Golf Course API: Rate limit exceeded');
+      } else if (response.status === 404) {
+        console.error('Golf Course API: Endpoint not found');
       }
       
+      // Return empty array instead of throwing
       return [];
     }
 
     const data = await response.json();
-    console.log('Golf Course Search: Raw API response:', data);
+    console.log('Golf Course Search: Raw API response:', JSON.stringify(data).substring(0, 500));
     
-    // The API might return courses in different formats, handle both
-    const courses = data.courses || data.data || data || [];
+    // The API might return courses in different formats, handle all possibilities
+    let courses = [];
+    if (Array.isArray(data)) {
+      courses = data;
+    } else if (data.courses && Array.isArray(data.courses)) {
+      courses = data.courses;
+    } else if (data.data && Array.isArray(data.data)) {
+      courses = data.data;
+    } else if (data.results && Array.isArray(data.results)) {
+      courses = data.results;
+    }
+    
     console.log('Golf Course Search: Found', courses.length, 'courses');
 
     // Transform API courses to our format
     const transformedCourses = courses.map(transformApiCourse);
+    console.log('Golf Course Search: Transformed', transformedCourses.length, 'courses');
     
     return transformedCourses;
   } catch (error) {
     console.error('Error searching golf courses:', error);
+    console.error('Error details:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return [];
   }
 }

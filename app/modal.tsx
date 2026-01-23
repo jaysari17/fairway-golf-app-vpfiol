@@ -31,7 +31,6 @@ export default function SelectCourseModal() {
   const [isSearching, setIsSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
-  const [backendAvailable, setBackendAvailable] = useState(true);
 
   // Debounced search effect
   useEffect(() => {
@@ -57,20 +56,10 @@ export default function SelectCourseModal() {
     try {
       const results = await searchGolfCourses(query, 50);
       console.log('Search results received:', results.length, 'courses');
-      
-      if (results.length === 0) {
-        // Check if backend is available
-        setBackendAvailable(false);
-        console.log('No courses found - backend may not be connected yet');
-      } else {
-        setBackendAvailable(true);
-      }
-      
       setSearchResults(results);
     } catch (error) {
       console.error('Search error:', error);
       setSearchResults([]);
-      setBackendAvailable(false);
     } finally {
       setIsSearching(false);
     }
@@ -117,7 +106,6 @@ export default function SelectCourseModal() {
 
   const showingApiResults = showResults && searchQuery.trim().length >= 2 && searchResults.length > 0;
   const showingSampleCourses = !showResults || searchQuery.trim().length < 2;
-  const showBackendWarning = hasSearched && !backendAvailable && searchResults.length === 0;
 
   return (
     <SafeAreaView 
@@ -166,7 +154,6 @@ export default function SelectCourseModal() {
                   setSearchResults([]);
                   setShowResults(false);
                   setHasSearched(false);
-                  setBackendAvailable(true);
                 }}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -204,20 +191,6 @@ export default function SelectCourseModal() {
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Popular courses (search to find more worldwide)
-              </Text>
-            </View>
-          )}
-
-          {showBackendWarning && (
-            <View style={[styles.warningBadge, { backgroundColor: theme.dark ? '#2C2C2E' : '#FFF3CD' }]}>
-              <IconSymbol
-                ios_icon_name="info.circle"
-                android_material_icon_name="info"
-                size={16}
-                color={theme.dark ? '#FFA500' : '#856404'}
-              />
-              <Text style={[styles.warningText, { color: theme.dark ? '#FFA500' : '#856404' }]}>
-                Worldwide course search is being set up. For now, you can select from popular courses below or try searching again in a moment.
               </Text>
             </View>
           )}
@@ -437,19 +410,6 @@ const styles = StyleSheet.create({
   resultsBadgeText: {
     fontSize: 13,
     fontWeight: '600',
-  },
-  warningBadge: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-    marginTop: 12,
-    padding: 12,
-    borderRadius: 8,
-  },
-  warningText: {
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
   },
   scrollView: {
     flex: 1,
