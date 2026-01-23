@@ -61,12 +61,14 @@ function transformApiCourse(apiCourse: any): GolfCourse {
 /**
  * Search for golf courses worldwide using the backend API
  * @param query - Search query (course name, city, state, country, etc.)
- * @param limit - Maximum number of results to return (default: 20)
+ * @param limit - Maximum number of results to return (default: 100, max: 1000)
+ * @param offset - Number of results to skip for pagination (default: 0)
  * @returns Array of golf courses matching the search query
  */
 export async function searchGolfCourses(
   query: string,
-  limit: number = 20
+  limit: number = 100,
+  offset: number = 0
 ): Promise<GolfCourse[]> {
   if (!query || query.trim().length === 0) {
     console.log('Golf Course Search: Empty search query');
@@ -74,10 +76,10 @@ export async function searchGolfCourses(
   }
 
   try {
-    console.log('Golf Course Search: Searching for:', query);
+    console.log('Golf Course Search: Searching for:', query, 'limit:', limit, 'offset:', offset);
     console.log('Golf Course Search: API URL:', GOLF_COURSE_API_URL);
     
-    const url = `${GOLF_COURSE_API_URL}?q=${encodeURIComponent(query)}&limit=${limit}`;
+    const url = `${GOLF_COURSE_API_URL}?q=${encodeURIComponent(query)}&limit=${limit}&offset=${offset}`;
     console.log('Golf Course Search: Fetching from:', url);
     
     const response = await fetch(url, {
@@ -99,6 +101,7 @@ export async function searchGolfCourses(
     console.log('Golf Course Search: Response data:', {
       success: data.success,
       count: data.count,
+      total: data.total,
       coursesLength: data.courses?.length || 0,
     });
     
@@ -119,6 +122,42 @@ export async function searchGolfCourses(
       name: error instanceof Error ? error.name : 'Unknown',
     });
     return [];
+  }
+}
+
+/**
+ * Get total count of courses matching a search query
+ * @param query - Search query
+ * @returns Total number of matching courses
+ */
+export async function getGolfCoursesCount(query: string): Promise<number> {
+  if (!query || query.trim().length === 0) {
+    return 0;
+  }
+
+  try {
+    console.log('Golf Course Count: Getting count for:', query);
+    
+    const url = `${GOLF_COURSE_API_URL}?q=${encodeURIComponent(query)}&limit=1&count_only=true`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    if (!response.ok) {
+      console.error('Golf Course Count: API error:', response.status);
+      return 0;
+    }
+    
+    const data = await response.json();
+    
+    return data.total || 0;
+  } catch (error) {
+    console.error('Error getting golf courses count:', error);
+    return 0;
   }
 }
 
@@ -150,14 +189,15 @@ export async function getGolfCourseById(courseId: string): Promise<GolfCourse | 
  */
 export async function searchGolfCoursesByState(
   state: string,
-  limit: number = 20
+  limit: number = 100,
+  offset: number = 0
 ): Promise<GolfCourse[]> {
   if (!state || state.trim().length === 0) {
     return [];
   }
 
   try {
-    return await searchGolfCourses(state, limit);
+    return await searchGolfCourses(state, limit, offset);
   } catch (error) {
     console.error('Error searching golf courses by state:', error);
     return [];
@@ -170,7 +210,8 @@ export async function searchGolfCoursesByState(
 export async function searchGolfCoursesByCity(
   city: string,
   state?: string,
-  limit: number = 20
+  limit: number = 100,
+  offset: number = 0
 ): Promise<GolfCourse[]> {
   if (!city || city.trim().length === 0) {
     return [];
@@ -178,7 +219,7 @@ export async function searchGolfCoursesByCity(
 
   try {
     const query = state ? `${city} ${state}` : city;
-    return await searchGolfCourses(query, limit);
+    return await searchGolfCourses(query, limit, offset);
   } catch (error) {
     console.error('Error searching golf courses by city:', error);
     return [];
@@ -190,14 +231,15 @@ export async function searchGolfCoursesByCity(
  */
 export async function searchGolfCoursesByCountry(
   country: string,
-  limit: number = 20
+  limit: number = 100,
+  offset: number = 0
 ): Promise<GolfCourse[]> {
   if (!country || country.trim().length === 0) {
     return [];
   }
 
   try {
-    return await searchGolfCourses(country, limit);
+    return await searchGolfCourses(country, limit, offset);
   } catch (error) {
     console.error('Error searching golf courses by country:', error);
     return [];
@@ -220,7 +262,7 @@ export async function testGolfCourseApi(): Promise<{ success: boolean; message: 
       
       return {
         success: true,
-        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\n🌍 Worldwide Golf Course Database:\n• 400+ famous courses from 50+ countries\n• USA, UK, Ireland, Scotland, Australia, Canada, Spain, France, Portugal, South Africa, New Zealand, Japan, Dubai, Mexico, Caribbean, China, South Korea, Thailand, Singapore, Malaysia, Indonesia, India, Argentina, Brazil, Chile, Germany, Netherlands, Belgium, Sweden, Denmark, Norway, Finland, Austria, Switzerland, Italy, Turkey, Morocco, Egypt, Kenya, Zimbabwe, Mauritius, Vietnam, Philippines\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)\n• "Pebble Beach" (California, USA)\n• "Cabot Cliffs" (Nova Scotia, Canada)\n• "Cape Kidnappers" (New Zealand)\n• "Emirates Golf Club" (Dubai)`,
+        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\n🌍 Worldwide Golf Course Database:\n• Thousands of courses from 100+ countries\n• Search up to 1000 results per query\n• USA, UK, Ireland, Scotland, Australia, Canada, Spain, France, Portugal, South Africa, New Zealand, Japan, Dubai, Mexico, Caribbean, China, South Korea, Thailand, Singapore, Malaysia, Indonesia, India, Argentina, Brazil, Chile, Germany, Netherlands, Belgium, Sweden, Denmark, Norway, Finland, Austria, Switzerland, Italy, Turkey, Morocco, Egypt, Kenya, Zimbabwe, Mauritius, Vietnam, Philippines, and more\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)\n• "Pebble Beach" (California, USA)\n• "Cabot Cliffs" (Nova Scotia, Canada)\n• "Cape Kidnappers" (New Zealand)\n• "Emirates Golf Club" (Dubai)`,
         data: results,
       };
     } else {
