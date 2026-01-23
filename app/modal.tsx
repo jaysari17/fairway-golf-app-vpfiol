@@ -1,5 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import { colors } from '@/styles/commonStyles';
+import { useTheme } from '@react-navigation/native';
+import { searchGolfCourses, testGolfCourseApi } from '@/utils/golfCourseApi';
+import * as Haptics from 'expo-haptics';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { GolfCourse } from '@/types/golf';
+import { useRouter } from 'expo-router';
+import { IconSymbol } from '@/components/IconSymbol';
 import {
   View,
   Text,
@@ -12,564 +19,353 @@ import {
   ActivityIndicator,
   Keyboard,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { IconSymbol } from '@/components/IconSymbol';
-import { colors } from '@/styles/commonStyles';
+import React, { useState, useEffect } from 'react';
 import { sampleCourses } from '@/data/sampleCourses';
-import { searchGolfCourses, testGolfCourseApi } from '@/utils/golfCourseApi';
-import { GolfCourse } from '@/types/golf';
-import * as Haptics from 'expo-haptics';
 
 export default function SelectCourseModal() {
-  const theme = useTheme();
   const router = useRouter();
-  const [selectedCourse, setSelectedCourse] = useState<GolfCourse | null>(null);
+  const { colors: themeColors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<GolfCourse[]>([]);
+  const [selectedCourse, setSelectedCourse] = useState<GolfCourse | null>(null);
   const [isSearching, setIsSearching] = useState(false);
-  const [showResults, setShowResults] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [hasMoreResults, setHasMoreResults] = useState(false);
-  const [currentOffset, setCurrentOffset] = useState(0);
+  const [isRateLimited, setIsRateLimited] = useState(false);
 
-  // Debounced search effect
   useEffect(() => {
-    const delayDebounceFn = setTimeout(() => {
-      if (searchQuery.trim().length >= 2) {
+    console.log('Search query changed:', searchQuery);
+    console.log('Search query length:', searchQuery.length);
+    
+    if (searchQuery.length >= 2) {
+      const timeoutId = setTimeout(() => {
+        console.log('User searching for golf courses:', searchQuery);
         performSearch(searchQuery, true);
-      } else {
-        setSearchResults([]);
-        setShowResults(false);
-        setHasSearched(false);
-        setHasMoreResults(false);
-        setCurrentOffset(0);
-      }
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
+      }, 500);
+      return () => {
+        clearTimeout(timeoutId);
+      };
+    } else if (searchQuery.length === 0) {
+      console.log('User cleared search');
+      setSearchResults([]);
+      setHasSearched(false);
+      setOffset(0);
+      setHasMore(false);
+      setIsRateLimited(false);
+    }
   }, [searchQuery]);
 
-  const performSearch = async (query: string, isNewSearch: boolean = false) => {
-    console.log('User searching for golf courses:', query);
-    console.log('Search query length:', query.length);
+  const performSearch = async (query: string, isNewSearch: boolean) => {
     console.log('Is new search:', isNewSearch);
+    const currentOffset = isNewSearch ? 0 : offset;
     
     if (isNewSearch) {
       setIsSearching(true);
-      setCurrentOffset(0);
+      setSearchResults([]);
+      setOffset(0);
+      setHasMore(false);
+      setIsRateLimited(false);
     } else {
       setIsLoadingMore(true);
     }
-    
-    setShowResults(true);
-    setHasSearched(true);
-    
+
+    console.log('Calling searchGolfCourses API with query:', query, 'offset:', currentOffset);
+
     try {
-      const offset = isNewSearch ? 0 : currentOffset;
-      const limit = 100;
+      const result = await searchGolfCourses(query, 100, currentOffset);
       
-      console.log('Calling searchGolfCourses API with query:', query, 'offset:', offset);
-      const results = await searchGolfCourses(query, limit, offset);
-      console.log('Search results received:', results.length, 'courses');
+      console.log('Search results received:', result.count, 'courses');
       
-      if (results.length > 0) {
-        console.log('First result:', results[0].name, '-', results[0].location);
-      } else {
-        console.log('No results found for query:', query);
+      if (result.rateLimited) {
+        console.log('API is rate-limited, showing sample data');
+        setIsRateLimited(true);
       }
-      
-      if (isNewSearch) {
-        setSearchResults(results);
+
+      if (result.success) {
+        if (isNewSearch) {
+          setSearchResults(result.courses);
+        } else {
+          setSearchResults((prev) => [...prev, ...result.courses]);
+        }
+        
+        setHasMore(result.count === 100 && result.total > currentOffset + result.count);
+        setOffset(currentOffset + result.count);
+        setHasSearched(true);
       } else {
-        setSearchResults(prev => [...prev, ...results]);
+        console.error('Search failed:', result.error);
+        if (isNewSearch) {
+          setSearchResults([]);
+        }
+        setHasSearched(true);
       }
-      
-      setHasMoreResults(results.length === limit);
-      setCurrentOffset(offset + results.length);
-      
     } catch (error) {
-      console.error('Search error in modal:', error);
-      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+      console.error('Search error:', error);
       if (isNewSearch) {
         setSearchResults([]);
       }
+      setHasSearched(true);
     } finally {
+      console.log('Search completed');
       setIsSearching(false);
       setIsLoadingMore(false);
-      console.log('Search completed');
     }
   };
 
   const handleLoadMore = () => {
-    if (!isLoadingMore && hasMoreResults && searchQuery.trim().length >= 2) {
-      console.log('User loading more results, current offset:', currentOffset);
+    if (!isLoadingMore && hasMore && searchQuery.length >= 2) {
+      console.log('User loading more results');
       performSearch(searchQuery, false);
     }
   };
 
   const handleCourseSelect = (course: GolfCourse) => {
-    console.log('User selected course:', course.name, course.location);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    console.log('User selected course:', course.name);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedCourse(course);
-    Keyboard.dismiss();
   };
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     if (!selectedCourse) {
-      Alert.alert('Error', 'Please select a course');
+      console.log('No course selected, showing alert');
+      Alert.alert('No Course Selected', 'Please select a golf course to continue.');
       return;
     }
 
-    try {
-      console.log('User continuing to rating flow with course:', selectedCourse.name);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
-      router.back();
-      setTimeout(() => {
-        router.push({
-          pathname: '/rating-flow',
-          params: {
-            courseId: selectedCourse.id,
-            courseName: selectedCourse.name,
-            courseLocation: selectedCourse.location,
-          },
-        });
-      }, 300);
-    } catch (error) {
-      console.error('Error selecting course:', error);
-      Alert.alert('Error', 'Failed to select course. Please try again.');
-    }
+    console.log('User continuing with selected course:', selectedCourse.name);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    
+    router.push({
+      pathname: '/rating-flow',
+      params: {
+        courseId: selectedCourse.id,
+        courseName: selectedCourse.name,
+        courseLocation: selectedCourse.location,
+      },
+    });
   };
 
   const handleTestApi = async () => {
-    console.log('User testing Golf Course API connection');
-    
+    console.log('User testing API');
     const result = await testGolfCourseApi();
-    
     Alert.alert(
-      result.success ? '🌍 Worldwide Golf Database' : '⚠️ Golf Course Search Status',
-      result.message,
-      [{ text: 'OK' }]
+      result.success ? 'API Test Successful' : 'API Test Failed',
+      result.message
     );
   };
 
-  const displayedCourses = showResults && searchQuery.trim().length >= 2
-    ? searchResults
-    : sampleCourses;
-
-  const showingApiResults = showResults && searchQuery.trim().length >= 2 && searchResults.length > 0;
-  const showingSampleCourses = !showResults || searchQuery.trim().length < 2;
-  const showNoResults = hasSearched && searchResults.length === 0 && !isSearching && searchQuery.trim().length >= 2;
-
-  const resultsCountText = searchResults.length > 0 
-    ? `${searchResults.length}${hasMoreResults ? '+' : ''} courses found`
-    : '';
+  const searchQueryDisplay = searchQuery;
+  const hasResults = searchResults.length > 0;
+  const showNoResults = hasSearched && !hasResults && !isSearching;
+  const showRateLimitBanner = isRateLimited;
 
   return (
-    <SafeAreaView 
-      style={[styles.safeArea, { backgroundColor: theme.colors.background }]}
-      edges={['bottom']}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View style={styles.headerTextContainer}>
-              <Text style={[styles.title, { color: theme.colors.text }]}>
-                Select a Course
-              </Text>
-              <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                🌍 38,000+ courses worldwide via Rapid Golf API
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={styles.testButton}
-              onPress={handleTestApi}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <IconSymbol
-                ios_icon_name="info.circle"
-                android_material_icon_name="info"
-                size={20}
-                color={colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+    <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={() => {
+            console.log('User closing modal');
+            router.back();
+          }}
+          style={styles.closeButton}
+        >
+          <IconSymbol
+            ios_icon_name="xmark"
+            android_material_icon_name="close"
+            size={24}
+            color={colors.text}
+          />
+        </TouchableOpacity>
+        <Text style={[styles.title, { color: themeColors.text }]}>Select a Course</Text>
+        <View style={styles.placeholder} />
+      </View>
 
-        <View style={styles.searchContainer}>
-          <View style={[
-            styles.searchInputContainer,
-            { 
-              backgroundColor: theme.dark ? '#1C1C1E' : '#F2F2F7',
-              borderColor: theme.colors.border,
+      <View style={styles.searchContainer}>
+        <IconSymbol
+          ios_icon_name="magnifyingglass"
+          android_material_icon_name="search"
+          size={20}
+          color={colors.textSecondary}
+        />
+        <TextInput
+          style={[styles.searchInput, { color: themeColors.text }]}
+          placeholder="Search for a golf course..."
+          placeholderTextColor={colors.textSecondary}
+          value={searchQueryDisplay}
+          onChangeText={setSearchQuery}
+          autoFocus
+          returnKeyType="search"
+          onSubmitEditing={() => {
+            if (searchQuery.length >= 2) {
+              Keyboard.dismiss();
             }
-          ]}>
+          }}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity
+            onPress={() => {
+              console.log('User clearing search');
+              setSearchQuery('');
+            }}
+          >
+            <IconSymbol
+              ios_icon_name="xmark.circle.fill"
+              android_material_icon_name="cancel"
+              size={20}
+              color={colors.textSecondary}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {showRateLimitBanner && (
+        <View style={styles.rateLimitBanner}>
+          <IconSymbol
+            ios_icon_name="exclamationmark.triangle.fill"
+            android_material_icon_name="warning"
+            size={20}
+            color="#FF9500"
+          />
+          <Text style={styles.rateLimitText}>
+            API rate limit reached. Showing sample courses. Full database will be available soon.
+          </Text>
+        </View>
+      )}
+
+      <ScrollView
+        style={styles.resultsContainer}
+        contentContainerStyle={styles.resultsContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {isSearching && (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: themeColors.text }]}>
+              Searching courses...
+            </Text>
+          </View>
+        )}
+
+        {showNoResults && (
+          <View style={styles.emptyContainer}>
             <IconSymbol
               ios_icon_name="magnifyingglass"
               android_material_icon_name="search"
-              size={20}
-              color={theme.dark ? '#98989D' : '#666'}
+              size={48}
+              color={colors.textSecondary}
             />
-            <TextInput
-              style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Search: Augusta, St Andrews, Dubai, Tokyo, Melbourne..."
-              placeholderTextColor={theme.dark ? '#98989D' : '#666'}
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              autoCapitalize="words"
-              autoCorrect={false}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity
-                onPress={() => {
-                  console.log('User cleared search');
-                  setSearchQuery('');
-                  setSearchResults([]);
-                  setShowResults(false);
-                  setHasSearched(false);
-                  setHasMoreResults(false);
-                  setCurrentOffset(0);
-                }}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <IconSymbol
-                  ios_icon_name="xmark.circle.fill"
-                  android_material_icon_name="cancel"
-                  size={20}
-                  color={theme.dark ? '#98989D' : '#666'}
-                />
-              </TouchableOpacity>
-            )}
+            <Text style={[styles.emptyTitle, { color: themeColors.text }]}>
+              No courses found
+            </Text>
+            <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+              Try searching for a different course name or location
+            </Text>
           </View>
-          
-          {showingApiResults && (
-            <View style={styles.resultsBadge}>
-              <IconSymbol
-                ios_icon_name="globe"
-                android_material_icon_name="public"
-                size={16}
-                color={colors.primary}
-              />
-              <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
-                ✓ {resultsCountText} • Complete course information
-              </Text>
-            </View>
-          )}
-          
-          {showingSampleCourses && (
-            <View style={styles.resultsBadge}>
-              <IconSymbol
-                ios_icon_name="star.fill"
-                android_material_icon_name="star"
-                size={16}
-                color={theme.dark ? '#98989D' : '#666'}
-              />
-              <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses • Search for any course worldwide
-              </Text>
-            </View>
-          )}
-          
-          {showNoResults && (
-            <View style={[styles.noResultsCard, { backgroundColor: theme.dark ? '#1C1C1E' : '#FFF3CD' }]}>
-              <View style={styles.noResultsHeader}>
-                <IconSymbol
-                  ios_icon_name="magnifyingglass"
-                  android_material_icon_name="search"
-                  size={20}
-                  color="#FF9500"
-                />
-                <Text style={[styles.noResultsTitle, { color: '#FF9500' }]}>
-                  No Results Found
-                </Text>
-              </View>
-              <Text style={[styles.noResultsText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                No courses found for &quot;{searchQuery}&quot;. Try searching for:
-              </Text>
-              <Text style={[styles.noResultsSuggestions, { color: theme.dark ? '#98989D' : '#666' }]}>
-                • Course name: &quot;Augusta National&quot;, &quot;Royal Dornoch&quot;{'\n'}
-                • City: &quot;Dubai&quot;, &quot;Melbourne&quot;, &quot;Tokyo&quot;{'\n'}
-                • Region: &quot;Scotland&quot;, &quot;California&quot;, &quot;Algarve&quot;{'\n'}
-                • Country: &quot;Ireland&quot;, &quot;Australia&quot;, &quot;Spain&quot;
-              </Text>
+        )}
+
+        {hasResults &&
+          searchResults.map((course, index) => {
+            const isSelected = selectedCourse?.id === course.id;
+            const courseName = course.name;
+            const courseLocation = course.location;
+            const courseDetails = `${course.holes || 18} holes • Par ${course.par || 72}`;
+
+            return (
               <TouchableOpacity
-                style={[styles.clearSearchButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  console.log('User viewing popular courses after no results');
-                  setSearchQuery('');
-                  setShowResults(false);
-                  setHasSearched(false);
-                  setHasMoreResults(false);
-                  setCurrentOffset(0);
-                }}
+                key={`${course.id}-${index}`}
+                style={[
+                  styles.courseCard,
+                  { backgroundColor: themeColors.card },
+                  isSelected && styles.courseCardSelected,
+                ]}
+                onPress={() => handleCourseSelect(course)}
               >
-                <Text style={styles.clearSearchButtonText}>
-                  View Popular Courses
-                </Text>
+                <View style={styles.courseInfo}>
+                  <Text style={[styles.courseName, { color: themeColors.text }]}>
+                    {courseName}
+                  </Text>
+                  <Text style={[styles.courseLocation, { color: colors.textSecondary }]}>
+                    {courseLocation}
+                  </Text>
+                  <Text style={[styles.courseDetails, { color: colors.textSecondary }]}>
+                    {courseDetails}
+                  </Text>
+                </View>
+                {isSelected && (
+                  <IconSymbol
+                    ios_icon_name="checkmark.circle.fill"
+                    android_material_icon_name="check-circle"
+                    size={24}
+                    color={colors.primary}
+                  />
+                )}
               </TouchableOpacity>
-            </View>
-          )}
-        </View>
+            );
+          })}
 
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.contentContainer}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          {isSearching ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching 38,000+ courses worldwide...
-              </Text>
-              <Text style={[styles.loadingSubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Query: {searchQuery}
-              </Text>
-            </View>
-          ) : displayedCourses.length === 0 && hasSearched ? (
-            <View style={styles.emptyContainer}>
-              <IconSymbol
-                ios_icon_name="magnifyingglass"
-                android_material_icon_name="search"
-                size={48}
-                color={theme.dark ? '#98989D' : '#666'}
-              />
-              <Text style={[styles.emptyText, { color: theme.colors.text }]}>
-                No courses found
-              </Text>
-              <Text style={[styles.emptySubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Try a different search term
-              </Text>
-            </View>
-          ) : (
-            <React.Fragment>
-              <View style={styles.courseGrid}>
-                {displayedCourses.map((course, index) => {
-                  const isApiCourse = course.id.startsWith('gc-');
-                  const isSelected = selectedCourse?.id === course.id;
-                  
-                  return (
-                    <TouchableOpacity
-                      key={`${course.id}-${index}`}
-                      style={[
-                        styles.courseCard,
-                        isSelected && { 
-                          backgroundColor: colors.primary,
-                          borderColor: colors.primary,
-                        },
-                        !isSelected && { 
-                          backgroundColor: theme.colors.card,
-                          borderColor: theme.colors.border,
-                        },
-                      ]}
-                      onPress={() => handleCourseSelect(course)}
-                      activeOpacity={0.7}
-                    >
-                      <View style={styles.courseCardContent}>
-                        {isApiCourse && showingApiResults && (
-                          <View style={styles.apiBadge}>
-                            <IconSymbol
-                              ios_icon_name="checkmark.seal.fill"
-                              android_material_icon_name="verified"
-                              size={12}
-                              color={isSelected ? '#FFFFFF' : colors.primary}
-                            />
-                            <Text style={[
-                              styles.apiBadgeText,
-                              { color: isSelected ? '#FFFFFF' : colors.primary }
-                            ]}>
-                              Verified
-                            </Text>
-                          </View>
-                        )}
-                        <Text
-                          style={[
-                            styles.courseName,
-                            { color: isSelected ? '#FFFFFF' : theme.colors.text },
-                          ]}
-                          numberOfLines={2}
-                        >
-                          {course.name}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.courseLocation,
-                            { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                          ]}
-                          numberOfLines={1}
-                        >
-                          {course.city}, {course.state}
-                        </Text>
-                        {course.country && course.country !== 'USA' && (
-                          <Text
-                            style={[
-                              styles.courseCountry,
-                              { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                            ]}
-                          >
-                            {course.country}
-                          </Text>
-                        )}
-                        {course.holes && course.par && (
-                          <View style={styles.courseDetailsRow}>
-                            <Text
-                              style={[
-                                styles.courseDetails,
-                                { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                              ]}
-                            >
-                              {course.holes} holes
-                            </Text>
-                            <Text
-                              style={[
-                                styles.courseDetailsSeparator,
-                                { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                              ]}
-                            >
-                              •
-                            </Text>
-                            <Text
-                              style={[
-                                styles.courseDetails,
-                                { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                              ]}
-                            >
-                              Par {course.par}
-                            </Text>
-                          </View>
-                        )}
-                        {isSelected && (
-                          <View style={styles.checkmark}>
-                            <IconSymbol
-                              ios_icon_name="checkmark.circle.fill"
-                              android_material_icon_name="check-circle"
-                              size={24}
-                              color="#FFFFFF"
-                            />
-                          </View>
-                        )}
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-              
-              {hasMoreResults && showingApiResults && (
-                <TouchableOpacity
-                  style={[
-                    styles.loadMoreButton,
-                    { 
-                      backgroundColor: theme.dark ? '#1C1C1E' : '#F2F2F7',
-                      borderColor: theme.colors.border,
-                    }
-                  ]}
-                  onPress={handleLoadMore}
-                  disabled={isLoadingMore}
-                  activeOpacity={0.7}
-                >
-                  {isLoadingMore ? (
-                    <React.Fragment>
-                      <ActivityIndicator size="small" color={colors.primary} />
-                      <Text style={[styles.loadMoreText, { color: theme.colors.text }]}>
-                        Loading more courses...
-                      </Text>
-                    </React.Fragment>
-                  ) : (
-                    <React.Fragment>
-                      <IconSymbol
-                        ios_icon_name="arrow.down.circle"
-                        android_material_icon_name="expand-more"
-                        size={24}
-                        color={colors.primary}
-                      />
-                      <Text style={[styles.loadMoreText, { color: theme.colors.text }]}>
-                        Load More Courses
-                      </Text>
-                    </React.Fragment>
-                  )}
-                </TouchableOpacity>
-              )}
-            </React.Fragment>
-          )}
-        </ScrollView>
+        {hasMore && !isLoadingMore && (
+          <TouchableOpacity style={styles.loadMoreButton} onPress={handleLoadMore}>
+            <Text style={styles.loadMoreText}>Load More</Text>
+          </TouchableOpacity>
+        )}
 
+        {isLoadingMore && (
+          <View style={styles.loadingMoreContainer}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={[styles.loadingMoreText, { color: themeColors.text }]}>
+              Loading more...
+            </Text>
+          </View>
+        )}
+      </ScrollView>
+
+      {selectedCourse && (
         <View style={styles.footer}>
           <TouchableOpacity
-            style={[
-              styles.continueButton, 
-              { backgroundColor: colors.primary },
-              !selectedCourse && styles.continueButtonDisabled,
-            ]}
+            style={[styles.continueButton, { backgroundColor: colors.primary }]}
             onPress={handleContinue}
-            disabled={!selectedCourse}
-            activeOpacity={0.8}
           >
-            <Text style={styles.continueButtonText}>
-              Continue to Rating
-            </Text>
-            <IconSymbol
-              ios_icon_name="arrow.right"
-              android_material_icon_name="arrow-forward"
-              size={20}
-              color="#FFFFFF"
-            />
+            <Text style={styles.continueButtonText}>Continue</Text>
           </TouchableOpacity>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
   },
   header: {
-    paddingHorizontal: 20,
-    paddingTop: 20,
-    marginBottom: 16,
-  },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 12,
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  testButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: 'rgba(87, 200, 161, 0.1)',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-  },
-  searchContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  searchInputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  placeholder: {
+    width: 32,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.cardBackground,
+    marginHorizontal: 20,
+    marginVertical: 16,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 12,
-    borderWidth: 1,
     gap: 12,
   },
   searchInput: {
@@ -577,117 +373,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     padding: 0,
   },
-  resultsBadge: {
+  rateLimitBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 8,
-    paddingHorizontal: 4,
-  },
-  resultsBadgeText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  noResultsCard: {
-    marginTop: 12,
-    padding: 16,
-    borderRadius: 12,
-    gap: 12,
-  },
-  noResultsHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  noResultsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  noResultsText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  noResultsSuggestions: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  clearSearchButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFF3E0',
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 12,
     borderRadius: 8,
-    alignSelf: 'flex-start',
-    marginTop: 4,
-  },
-  clearSearchButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  contentContainer: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  courseGrid: {
     gap: 12,
   },
-  courseCard: {
-    borderRadius: 16,
-    borderWidth: 2,
-    padding: 20,
-    minHeight: 100,
-    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.06)',
-    elevation: 2,
-  },
-  courseCardContent: {
+  rateLimitText: {
     flex: 1,
-    justifyContent: 'center',
-  },
-  apiBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-  },
-  apiBadgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  courseName: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  courseLocation: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  courseCountry: {
     fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 4,
+    color: '#E65100',
+    lineHeight: 18,
   },
-  courseDetailsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+  resultsContainer: {
+    flex: 1,
   },
-  courseDetails: {
-    fontSize: 12,
-  },
-  courseDetailsSeparator: {
-    fontSize: 12,
-  },
-  checkmark: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
+  resultsContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   loadingContainer: {
     alignItems: 'center',
@@ -697,11 +404,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    fontWeight: '600',
-  },
-  loadingSubtext: {
-    fontSize: 14,
-    textAlign: 'center',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -709,52 +411,76 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
     gap: 12,
   },
-  emptyText: {
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 16,
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
   },
-  emptySubtext: {
-    fontSize: 16,
+  emptySubtitle: {
+    fontSize: 14,
     textAlign: 'center',
+    paddingHorizontal: 40,
   },
-  loadMoreButton: {
+  courseCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
+    padding: 16,
     borderRadius: 12,
-    borderWidth: 1,
-    marginTop: 16,
+    marginBottom: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  courseCardSelected: {
+    borderColor: colors.primary,
+  },
+  courseInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  courseName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  courseLocation: {
+    fontSize: 14,
+  },
+  courseDetails: {
+    fontSize: 12,
+  },
+  loadMoreButton: {
+    backgroundColor: colors.cardBackground,
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
   },
   loadMoreText: {
     fontSize: 16,
     fontWeight: '600',
+    color: colors.primary,
   },
-  footer: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-  },
-  continueButton: {
+  loadingMoreContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 20,
     gap: 12,
-    paddingVertical: 18,
-    borderRadius: 16,
-    boxShadow: '0px 4px 16px rgba(87, 200, 161, 0.4)',
-    elevation: 4,
   },
-  continueButtonDisabled: {
-    opacity: 0.5,
+  loadingMoreText: {
+    fontSize: 14,
+  },
+  footer: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  continueButton: {
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
   },
   continueButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
