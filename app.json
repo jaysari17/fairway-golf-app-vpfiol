@@ -109,7 +109,8 @@
       },
       "eas": {
         "projectId": "your-project-id-here"
-      }
+      },
+      "EXPO_PUBLIC_GOLF_COURSE_API_KEY": "U2RVDJNGLFSNE5B2MAOAZGX2SM"
     },
     "description": "Track your golf journey. Log rounds, rate courses, and build your ultimate golf profile. Like Beli for golf courses.",
     "primaryColor": "#8BC34A",
