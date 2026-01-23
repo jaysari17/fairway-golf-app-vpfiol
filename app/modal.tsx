@@ -18,7 +18,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { IconSymbol } from '@/components/IconSymbol';
 import { colors } from '@/styles/commonStyles';
 import { sampleCourses } from '@/data/sampleCourses';
-import { searchGolfCourses } from '@/utils/golfCourseApi';
+import { searchGolfCourses, testGolfCourseApi } from '@/utils/golfCourseApi';
 import { GolfCourse } from '@/types/golf';
 import * as Haptics from 'expo-haptics';
 
@@ -49,19 +49,30 @@ export default function SelectCourseModal() {
 
   const performSearch = async (query: string) => {
     console.log('User searching for golf courses:', query);
+    console.log('Search query length:', query.length);
     setIsSearching(true);
     setShowResults(true);
     setHasSearched(true);
     
     try {
+      console.log('Calling searchGolfCourses API with query:', query);
       const results = await searchGolfCourses(query, 50);
       console.log('Search results received:', results.length, 'courses');
+      
+      if (results.length > 0) {
+        console.log('First result:', results[0].name, '-', results[0].location);
+      } else {
+        console.log('No results found for query:', query);
+      }
+      
       setSearchResults(results);
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Search error in modal:', error);
+      console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
       setSearchResults([]);
     } finally {
       setIsSearching(false);
+      console.log('Search completed, isSearching set to false');
     }
   };
 
@@ -100,6 +111,27 @@ export default function SelectCourseModal() {
     }
   };
 
+  const handleTestApi = async () => {
+    console.log('User testing Golf Course API connection');
+    Alert.alert('Testing API', 'Testing Golf Course API connection...');
+    
+    const result = await testGolfCourseApi();
+    
+    if (result.success) {
+      Alert.alert(
+        'API Test Successful ✓',
+        `The Golf Course API is working correctly!\n\nResponse: ${JSON.stringify(result.data).substring(0, 200)}...`,
+        [{ text: 'OK' }]
+      );
+    } else {
+      Alert.alert(
+        'API Test Failed ✗',
+        `The Golf Course API is not responding correctly.\n\nError: ${result.message}\n\nPlease check your API key and internet connection.`,
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
   const displayedCourses = showResults && searchQuery.trim().length >= 2
     ? searchResults
     : sampleCourses;
@@ -114,12 +146,28 @@ export default function SelectCourseModal() {
     >
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            Select a Course
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-            Search for any course worldwide or choose from popular options
-          </Text>
+          <View style={styles.headerTop}>
+            <View style={styles.headerTextContainer}>
+              <Text style={[styles.title, { color: theme.colors.text }]}>
+                Select a Course
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Search for any course worldwide or choose from popular options
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.testButton}
+              onPress={handleTestApi}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <IconSymbol
+                ios_icon_name="antenna.radiowaves.left.and.right"
+                android_material_icon_name="wifi"
+                size={20}
+                color={colors.primary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.searchContainer}>
@@ -176,7 +224,7 @@ export default function SelectCourseModal() {
                 color={colors.primary}
               />
               <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
-                Showing {searchResults.length} real courses from worldwide database
+                ✓ Showing {searchResults.length} real courses from worldwide database
               </Text>
             </View>
           )}
@@ -194,6 +242,20 @@ export default function SelectCourseModal() {
               </Text>
             </View>
           )}
+          
+          {hasSearched && searchResults.length === 0 && !isSearching && searchQuery.trim().length >= 2 && (
+            <View style={[styles.resultsBadge, { backgroundColor: theme.dark ? '#1C1C1E' : '#FFF3CD', padding: 8, borderRadius: 8, marginTop: 8 }]}>
+              <IconSymbol
+                ios_icon_name="exclamationmark.triangle"
+                android_material_icon_name="warning"
+                size={16}
+                color="#FF9500"
+              />
+              <Text style={[styles.resultsBadgeText, { color: '#FF9500', flex: 1 }]}>
+                No results from API. The Golf Course API may be unavailable or your search didn&apos;t match any courses. Try different search terms or use popular courses below.
+              </Text>
+            </View>
+          )}
         </View>
 
         <ScrollView
@@ -207,6 +269,9 @@ export default function SelectCourseModal() {
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Searching golf courses worldwide...
+              </Text>
+              <Text style={[styles.loadingSubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Searching for: {searchQuery}
               </Text>
             </View>
           ) : displayedCourses.length === 0 && hasSearched ? (
@@ -226,9 +291,16 @@ export default function SelectCourseModal() {
               <Text style={[styles.emptyHint, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Examples: &quot;Pebble Beach&quot;, &quot;Augusta&quot;, &quot;St Andrews&quot;
               </Text>
+              <Text style={[styles.emptyDebug, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Searched for: &quot;{searchQuery}&quot;
+              </Text>
+              <Text style={[styles.emptyDebug, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Tap the WiFi icon above to test API connection
+              </Text>
               <TouchableOpacity
                 style={[styles.sampleCoursesButton, { backgroundColor: colors.primary }]}
                 onPress={() => {
+                  console.log('User viewing popular courses after no results');
                   setSearchQuery('');
                   setShowResults(false);
                   setHasSearched(false);
@@ -374,6 +446,20 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     marginBottom: 16,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  headerTextContainer: {
+    flex: 1,
+  },
+  testButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: 'rgba(87, 200, 161, 0.1)',
+  },
   title: {
     fontSize: 32,
     fontWeight: '800',
@@ -476,6 +562,11 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingSubtext: {
+    fontSize: 14,
+    textAlign: 'center',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -497,6 +588,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 8,
+  },
+  emptyDebug: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 8,
+    opacity: 0.6,
   },
   sampleCoursesButton: {
     marginTop: 20,
