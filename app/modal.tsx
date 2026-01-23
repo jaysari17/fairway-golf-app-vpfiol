@@ -117,7 +117,7 @@ export default function SelectCourseModal() {
     const result = await testGolfCourseApi();
     
     Alert.alert(
-      'Golf Course Search Status',
+      result.success ? '✅ Golf Course Search Active' : '⚠️ Golf Course Search Status',
       result.message,
       [{ text: 'OK' }]
     );
@@ -144,7 +144,7 @@ export default function SelectCourseModal() {
                 Select a Course
               </Text>
               <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Search for any course worldwide or choose from popular options
+                Search 100+ famous courses worldwide
               </Text>
             </View>
             <TouchableOpacity
@@ -178,7 +178,7 @@ export default function SelectCourseModal() {
             />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Search courses worldwide..."
+              placeholder="Search: Pebble Beach, St Andrews, Augusta..."
               placeholderTextColor={theme.dark ? '#98989D' : '#666'}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -216,7 +216,7 @@ export default function SelectCourseModal() {
                 color={colors.primary}
               />
               <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
-                ✓ Showing {searchResults.length} real courses from worldwide database
+                ✓ Found {searchResults.length} courses from worldwide database
               </Text>
             </View>
           )}
@@ -230,7 +230,7 @@ export default function SelectCourseModal() {
                 color={theme.dark ? '#98989D' : '#666'}
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses (worldwide search coming soon)
+                Popular courses • Try searching above
               </Text>
             </View>
           )}
@@ -239,20 +239,22 @@ export default function SelectCourseModal() {
             <View style={[styles.noResultsCard, { backgroundColor: theme.dark ? '#1C1C1E' : '#FFF3CD' }]}>
               <View style={styles.noResultsHeader}>
                 <IconSymbol
-                  ios_icon_name="exclamationmark.triangle.fill"
-                  android_material_icon_name="warning"
+                  ios_icon_name="magnifyingglass"
+                  android_material_icon_name="search"
                   size={20}
                   color="#FF9500"
                 />
                 <Text style={[styles.noResultsTitle, { color: '#FF9500' }]}>
-                  Worldwide Search Coming Soon
+                  No Results Found
                 </Text>
               </View>
               <Text style={[styles.noResultsText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                The worldwide golf course search feature is currently being integrated. For now, please select from the popular courses below or manually enter your course details.
+                No courses found for &quot;{searchQuery}&quot;. Try searching for:
               </Text>
-              <Text style={[styles.noResultsSearched, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searched for: &quot;{searchQuery}&quot;
+              <Text style={[styles.noResultsSuggestions, { color: theme.dark ? '#98989D' : '#666' }]}>
+                • Course name: &quot;Pebble Beach&quot;, &quot;St Andrews&quot;{'\n'}
+                • City: &quot;Augusta&quot;, &quot;Scottsdale&quot;{'\n'}
+                • Country: &quot;Scotland&quot;, &quot;Ireland&quot;
               </Text>
               <TouchableOpacity
                 style={[styles.clearSearchButton, { backgroundColor: colors.primary }]}
@@ -281,7 +283,7 @@ export default function SelectCourseModal() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching golf courses worldwide...
+                Searching worldwide golf courses...
               </Text>
               <Text style={[styles.loadingSubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Searching for: {searchQuery}
@@ -299,13 +301,13 @@ export default function SelectCourseModal() {
                 No courses found
               </Text>
               <Text style={[styles.emptySubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Please use the popular courses below
+                Try a different search term
               </Text>
             </View>
           ) : (
             <View style={styles.courseGrid}>
               {displayedCourses.map((course, index) => {
-                const isApiCourse = course.id.startsWith('api-');
+                const isApiCourse = course.id.startsWith('gc-');
                 const isSelected = selectedCourse?.id === course.id;
                 
                 return (
@@ -326,7 +328,7 @@ export default function SelectCourseModal() {
                     activeOpacity={0.7}
                   >
                     <View style={styles.courseCardContent}>
-                      {isApiCourse && (
+                      {isApiCourse && showingApiResults && (
                         <View style={styles.apiBadge}>
                           <IconSymbol
                             ios_icon_name="globe"
@@ -338,7 +340,7 @@ export default function SelectCourseModal() {
                             styles.apiBadgeText,
                             { color: isSelected ? '#FFFFFF' : colors.primary }
                           ]}>
-                            Real Course
+                            Worldwide DB
                           </Text>
                         </View>
                       )}
@@ -525,9 +527,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
   },
-  noResultsSearched: {
-    fontSize: 12,
-    fontStyle: 'italic',
+  noResultsSuggestions: {
+    fontSize: 13,
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   clearSearchButton: {
     paddingVertical: 10,

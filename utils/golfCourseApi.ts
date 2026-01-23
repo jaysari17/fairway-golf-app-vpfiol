@@ -1,11 +1,9 @@
 
 import { GolfCourse } from '@/types/golf';
 
-// Golf Course API Configuration
-const GOLF_COURSE_API_KEY = process.env.EXPO_PUBLIC_GOLF_COURSE_API_KEY || 'U2RVDJNGLFSNE5B2MAOAZGX2SM';
-
-// Backend API endpoint (will be created)
-const BACKEND_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// Supabase Edge Function URL
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://hwpiblxpxghuzpkaenwg.supabase.co';
+const GOLF_COURSE_API_URL = `${SUPABASE_URL}/functions/v1/golf-courses-search`;
 
 export interface GolfCourseApiResponse {
   id?: number;
@@ -30,7 +28,7 @@ function transformApiCourse(apiCourse: any): GolfCourse {
   console.log('Transforming API course:', apiCourse.name);
   
   const city = apiCourse.city || '';
-  const state = apiCourse.state_or_province || apiCourse.state || '';
+  const state = apiCourse.state || apiCourse.state_or_province || '';
   const country = apiCourse.country || '';
   
   // Build location string
@@ -38,13 +36,13 @@ function transformApiCourse(apiCourse: any): GolfCourse {
   const location = locationParts.join(', ');
 
   const transformed = {
-    id: `api-${apiCourse.id || Math.random().toString(36).substr(2, 9)}`,
+    id: apiCourse.id || `api-${Math.random().toString(36).substr(2, 9)}`,
     name: apiCourse.name || 'Unknown Course',
     location: location || 'Unknown Location',
     city: city,
     state: state,
     country: country,
-    type: (apiCourse.course_type?.toLowerCase() || 'public') as any,
+    type: (apiCourse.type?.toLowerCase() || apiCourse.course_type?.toLowerCase() || 'public') as any,
     holes: apiCourse.holes || 18,
     par: apiCourse.par || 72,
     yardage: apiCourse.yardage || 6500,
@@ -62,7 +60,7 @@ function transformApiCourse(apiCourse: any): GolfCourse {
 
 /**
  * Search for golf courses worldwide using the backend API
- * @param query - Search query (course name, city, state, etc.)
+ * @param query - Search query (course name, city, state, country, etc.)
  * @param limit - Maximum number of results to return (default: 20)
  * @returns Array of golf courses matching the search query
  */
@@ -77,22 +75,42 @@ export async function searchGolfCourses(
 
   try {
     console.log('Golf Course Search: Searching for:', query);
+    console.log('Golf Course Search: API URL:', GOLF_COURSE_API_URL);
     
-    // TODO: Backend Integration - GET /api/golf-courses/search?q={query}&limit={limit}
-    // This endpoint should:
-    // - Accept query parameter 'q' for search term
-    // - Accept query parameter 'limit' for max results (default 20)
-    // - Return array of golf courses: [{ id, name, city, state, country, holes, par, yardage, type, website, phone, latitude, longitude }]
-    // - Handle authentication with the Golf Course API on the backend
-    // - Implement caching to avoid rate limits
-    // - Return empty array if no results found
+    const url = `${GOLF_COURSE_API_URL}?q=${encodeURIComponent(query)}&limit=${limit}`;
+    console.log('Golf Course Search: Fetching from:', url);
     
-    console.log('Golf Course Search: Backend integration pending');
-    console.log('Golf Course Search: Would call:', `${BACKEND_API_URL}/api/golf-courses/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
     
-    // For now, return empty array until backend is ready
-    // The UI will show the "No results from API" message and suggest popular courses
-    return [];
+    console.log('Golf Course Search: Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Golf Course Search: API error:', response.status, errorText);
+      return [];
+    }
+    
+    const data = await response.json();
+    console.log('Golf Course Search: Response data:', {
+      success: data.success,
+      count: data.count,
+      coursesLength: data.courses?.length || 0,
+    });
+    
+    if (!data.success || !data.courses) {
+      console.log('Golf Course Search: No courses in response');
+      return [];
+    }
+    
+    const transformedCourses = data.courses.map(transformApiCourse);
+    console.log('Golf Course Search: Transformed', transformedCourses.length, 'courses');
+    
+    return transformedCourses;
   } catch (error) {
     console.error('Error searching golf courses:', error);
     console.error('Error details:', {
@@ -113,13 +131,13 @@ export async function getGolfCourseById(courseId: string): Promise<GolfCourse | 
   try {
     console.log('Golf Course Search: Fetching course by ID:', courseId);
     
-    // TODO: Backend Integration - GET /api/golf-courses/{courseId}
-    // This endpoint should:
-    // - Accept courseId as path parameter
-    // - Return single golf course object or 404 if not found
-    // - Return: { id, name, city, state, country, holes, par, yardage, type, website, phone, latitude, longitude }
+    // Search by ID (the backend will match it)
+    const results = await searchGolfCourses(courseId, 1);
     
-    console.log('Golf Course Search: Backend integration pending');
+    if (results.length > 0) {
+      return results[0];
+    }
+    
     return null;
   } catch (error) {
     console.error('Error fetching golf course:', error);
@@ -139,9 +157,7 @@ export async function searchGolfCoursesByState(
   }
 
   try {
-    // TODO: Backend Integration - GET /api/golf-courses/search?state={state}&limit={limit}
-    console.log('Golf Course Search: Backend integration pending for state search');
-    return [];
+    return await searchGolfCourses(state, limit);
   } catch (error) {
     console.error('Error searching golf courses by state:', error);
     return [];
@@ -161,9 +177,8 @@ export async function searchGolfCoursesByCity(
   }
 
   try {
-    // TODO: Backend Integration - GET /api/golf-courses/search?city={city}&state={state}&limit={limit}
-    console.log('Golf Course Search: Backend integration pending for city search');
-    return [];
+    const query = state ? `${city} ${state}` : city;
+    return await searchGolfCourses(query, limit);
   } catch (error) {
     console.error('Error searching golf courses by city:', error);
     return [];
@@ -182,9 +197,7 @@ export async function searchGolfCoursesByCountry(
   }
 
   try {
-    // TODO: Backend Integration - GET /api/golf-courses/search?country={country}&limit={limit}
-    console.log('Golf Course Search: Backend integration pending for country search');
-    return [];
+    return await searchGolfCourses(country, limit);
   } catch (error) {
     console.error('Error searching golf courses by country:', error);
     return [];
@@ -198,19 +211,29 @@ export async function testGolfCourseApi(): Promise<{ success: boolean; message: 
   console.log('=== TESTING GOLF COURSE API ===');
   
   try {
-    // TODO: Backend Integration - GET /api/golf-courses/test
-    // This endpoint should test the Golf Course API connection and return status
-    // Return: { success: boolean, message: string, data?: any }
+    console.log('Testing with query: "Pebble Beach"');
+    const results = await searchGolfCourses('Pebble Beach', 5);
     
-    return {
-      success: false,
-      message: 'Golf Course API integration is pending. The backend endpoint needs to be created to handle golf course searches securely. For now, please use the popular courses shown below.',
-    };
+    if (results.length > 0) {
+      console.log('✅ API Test Successful!');
+      console.log('Found courses:', results.map(c => c.name).join(', '));
+      
+      return {
+        success: true,
+        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\nThe worldwide golf course database includes:\n• 100+ famous courses worldwide\n• USA, UK, Ireland, Australia, Canada, Spain, France, South Africa, New Zealand, Japan, Dubai\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)`,
+        data: results,
+      };
+    } else {
+      return {
+        success: false,
+        message: '⚠️ API returned no results for test query. The backend is running but may need more data.',
+      };
+    }
   } catch (error) {
     console.error('Test API Error:', error);
     return {
       success: false,
-      message: `API test failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      message: `❌ API test failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease check your internet connection and try again.`,
     };
   }
 }
