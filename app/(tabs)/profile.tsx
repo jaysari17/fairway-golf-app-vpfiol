@@ -72,7 +72,7 @@ export default function ProfileScreen() {
     if (!result.canceled && editedProfile) {
       setEditedProfile({
         ...editedProfile,
-        avatar: result.assets[0].uri,
+        avatarUrl: result.assets[0].uri,
       });
     }
   };
@@ -247,8 +247,8 @@ export default function ProfileScreen() {
             disabled={!isEditing}
             style={styles.avatarContainer}
           >
-            {editedProfile.avatar ? (
-              <Image source={{ uri: editedProfile.avatar }} style={styles.avatar} />
+            {editedProfile.avatarUrl ? (
+              <Image source={{ uri: editedProfile.avatarUrl }} style={styles.avatar} />
             ) : (
               <View style={[styles.avatarPlaceholder, { backgroundColor: colors.primary }]}>
                 <Text style={styles.avatarText}>{displayName.charAt(0).toUpperCase()}</Text>

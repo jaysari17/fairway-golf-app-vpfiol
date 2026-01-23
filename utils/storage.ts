@@ -22,9 +22,9 @@ export const StorageService = {
     }
   },
 
-  async saveRound(round: Round): Promise<void> {
+  async saveRound(round: Omit<Round, 'id'>): Promise<void> {
     try {
-      console.log('Saving round to Supabase:', round.id);
+      console.log('Saving round to Supabase:', round.courseName);
       await SupabaseStorageService.saveRound(round);
     } catch (error) {
       console.error('Error saving round:', error);

@@ -178,7 +178,6 @@ export default function RatingFlowScreen() {
       
       // Save the rating
       const rating: CourseRating = {
-        id: Date.now().toString(),
         courseId,
         courseName,
         courseLocation,
@@ -189,20 +188,21 @@ export default function RatingFlowScreen() {
         rankPosition,
         totalCourses: rankedCourses.length + 1,
         finalScore,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        playCount,
       };
       
       await RatingStorageService.saveRating(rating);
       
       // Save a round for this course
-      const round: Round = {
-        id: Date.now().toString(),
+      const round: Omit<Round, 'id'> = {
         courseId,
         courseName,
         courseLocation,
-        date: new Date(),
-        rating: Math.round(finalScore * 10),
+        datePlayed: new Date(),
+        score: undefined,
+        teeBox: undefined,
+        yardage: undefined,
+        review: undefined,
       };
       
       await StorageService.saveRound(round);

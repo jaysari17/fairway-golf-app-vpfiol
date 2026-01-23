@@ -39,7 +39,7 @@ export interface UserProfile {
   email?: string; // Email is stored in auth.users, not profiles
   displayName?: string; // display_name in database
   phoneNumber?: string; // phone_number in database
-  avatar?: string; // avatar_url in database
+  avatarUrl?: string; // avatar_url in database
   bio?: string;
   handicap?: number;
   totalRounds?: number; // Calculated field, not in database
