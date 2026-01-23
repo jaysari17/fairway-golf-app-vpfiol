@@ -144,7 +144,7 @@ export default function SelectCourseModal() {
                 Select a Course
               </Text>
               <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Search 100+ famous courses worldwide
+                Search 400+ courses worldwide
               </Text>
             </View>
             <TouchableOpacity
@@ -178,7 +178,7 @@ export default function SelectCourseModal() {
             />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Search: Pebble Beach, St Andrews, Augusta..."
+              placeholder="Search: Pebble Beach, St Andrews, Dubai, Tokyo..."
               placeholderTextColor={theme.dark ? '#98989D' : '#666'}
               value={searchQuery}
               onChangeText={setSearchQuery}

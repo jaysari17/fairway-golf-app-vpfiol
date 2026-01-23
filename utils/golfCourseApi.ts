@@ -220,7 +220,7 @@ export async function testGolfCourseApi(): Promise<{ success: boolean; message: 
       
       return {
         success: true,
-        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\nThe worldwide golf course database includes:\n• 100+ famous courses worldwide\n• USA, UK, Ireland, Australia, Canada, Spain, France, South Africa, New Zealand, Japan, Dubai\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)`,
+        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\n🌍 Worldwide Golf Course Database:\n• 400+ famous courses from 50+ countries\n• USA, UK, Ireland, Scotland, Australia, Canada, Spain, France, Portugal, South Africa, New Zealand, Japan, Dubai, Mexico, Caribbean, China, South Korea, Thailand, Singapore, Malaysia, Indonesia, India, Argentina, Brazil, Chile, Germany, Netherlands, Belgium, Sweden, Denmark, Norway, Finland, Austria, Switzerland, Italy, Turkey, Morocco, Egypt, Kenya, Zimbabwe, Mauritius, Vietnam, Philippines\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)\n• "Pebble Beach" (California, USA)\n• "Cabot Cliffs" (Nova Scotia, Canada)\n• "Cape Kidnappers" (New Zealand)\n• "Emirates Golf Club" (Dubai)`,
         data: results,
       };
     } else {
