@@ -181,7 +181,7 @@ export default function SelectCourseModal() {
                 Select a Course
               </Text>
               <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                🌍 1000+ premium courses from 40+ countries
+                🌍 38,000+ courses worldwide via Rapid Golf API
               </Text>
             </View>
             <TouchableOpacity
@@ -325,7 +325,7 @@ export default function SelectCourseModal() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching 1000+ premium courses...
+                Searching 38,000+ courses worldwide...
               </Text>
               <Text style={[styles.loadingSubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
                 Query: {searchQuery}
