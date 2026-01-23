@@ -183,7 +183,10 @@ export default function SocialFeedScreen() {
               Add friends to see their golf activity, compare courses, and share your journey
             </Text>
             <TouchableOpacity
-              onPress={() => Alert.alert('Coming Soon', 'Friend search will be available soon!')}
+              onPress={() => {
+                console.log('User tapped Find Friends button');
+                router.push('/find-friends');
+              }}
               style={[styles.primaryButton, { backgroundColor: colors.primary }]}
               activeOpacity={0.8}
             >
