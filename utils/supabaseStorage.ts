@@ -8,13 +8,27 @@ import { FeedEvent, FeedComment } from '@/types/social';
 // PROFILE OPERATIONS
 // ============================================
 
-export const saveProfile = async (profileData: Partial<UserProfile>): Promise<void> => {
-  console.log('Saving profile to Supabase:', profileData);
+const saveProfile = async (profileData: Partial<UserProfile>): Promise<void> => {
+  console.log('SupabaseStorage.saveProfile: Starting profile save with data:', {
+    username: profileData.username,
+    displayName: profileData.displayName,
+    has_bio: !!profileData.bio,
+    has_avatar: !!profileData.avatarUrl,
+  });
   
-  const { data: { user } } = await supabase.auth.getUser();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  
+  if (userError) {
+    console.error('SupabaseStorage.saveProfile: Error getting current user:', userError);
+    throw new Error('Failed to get authenticated user');
+  }
+  
   if (!user) {
+    console.error('SupabaseStorage.saveProfile: No authenticated user');
     throw new Error('No authenticated user');
   }
+
+  console.log('SupabaseStorage.saveProfile: Authenticated user ID:', user.id);
 
   // Prepare profile data
   const profile = {
@@ -28,6 +42,8 @@ export const saveProfile = async (profileData: Partial<UserProfile>): Promise<vo
     updated_at: new Date().toISOString(),
   };
 
+  console.log('SupabaseStorage.saveProfile: Upserting profile to database');
+  
   // Use upsert to handle both insert and update cases
   // The trigger might have already created a profile, so we update it
   const { error } = await supabase
@@ -38,27 +54,37 @@ export const saveProfile = async (profileData: Partial<UserProfile>): Promise<vo
     });
 
   if (error) {
-    console.error('Error saving profile:', error);
+    console.error('SupabaseStorage.saveProfile: Error saving profile:', error.message, error.details, error.hint);
     throw error;
   }
 
-  console.log('Profile saved successfully');
+  console.log('SupabaseStorage.saveProfile: Profile saved successfully');
 };
 
-export const getProfile = async (userId?: string): Promise<UserProfile | null> => {
-  console.log('Fetching profile from Supabase for user:', userId || 'current user');
+const getProfile = async (userId?: string): Promise<UserProfile | null> => {
+  console.log('SupabaseStorage.getProfile: Starting profile fetch for user:', userId || 'current user');
   
   let targetUserId = userId;
   
   if (!targetUserId) {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      console.error('No authenticated user');
+    console.log('SupabaseStorage.getProfile: No userId provided, getting current user');
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError) {
+      console.error('SupabaseStorage.getProfile: Error getting current user:', userError);
       return null;
     }
+    
+    if (!user) {
+      console.error('SupabaseStorage.getProfile: No authenticated user found');
+      return null;
+    }
+    
     targetUserId = user.id;
+    console.log('SupabaseStorage.getProfile: Current user ID:', targetUserId);
   }
 
+  console.log('SupabaseStorage.getProfile: Querying profiles table for user_id:', targetUserId);
   const { data, error } = await supabase
     .from('profiles')
     .select('*')
@@ -66,14 +92,28 @@ export const getProfile = async (userId?: string): Promise<UserProfile | null> =
     .single();
 
   if (error) {
-    console.error('Error fetching profile:', error);
+    console.error('SupabaseStorage.getProfile: Error fetching profile:', error.message, error.details, error.hint);
+    
+    // If no rows found, return null (not an error, just no profile yet)
+    if (error.code === 'PGRST116') {
+      console.log('SupabaseStorage.getProfile: No profile found in database (PGRST116)');
+      return null;
+    }
+    
     return null;
   }
 
   if (!data) {
-    console.log('No profile found');
+    console.log('SupabaseStorage.getProfile: Query succeeded but no data returned');
     return null;
   }
+
+  console.log('SupabaseStorage.getProfile: Profile data retrieved:', {
+    username: data.username,
+    display_name: data.display_name,
+    has_bio: !!data.bio,
+    has_avatar: !!data.avatar_url,
+  });
 
   // Map database fields to UserProfile interface
   const profile: UserProfile = {
@@ -89,7 +129,7 @@ export const getProfile = async (userId?: string): Promise<UserProfile | null> =
     contactsSynced: false,
   };
 
-  console.log('Profile fetched successfully');
+  console.log('SupabaseStorage.getProfile: Profile mapped successfully');
   return profile;
 };
 
@@ -97,7 +137,7 @@ export const getProfile = async (userId?: string): Promise<UserProfile | null> =
 // ROUND OPERATIONS
 // ============================================
 
-export const saveRound = async (roundData: Omit<Round, 'id'>): Promise<void> => {
+const saveRound = async (roundData: Omit<Round, 'id'>): Promise<void> => {
   console.log('Saving round to Supabase:', roundData);
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -129,7 +169,7 @@ export const saveRound = async (roundData: Omit<Round, 'id'>): Promise<void> => 
   console.log('Round saved successfully');
 };
 
-export const getRounds = async (userId?: string): Promise<Round[]> => {
+const getRounds = async (userId?: string): Promise<Round[]> => {
   console.log('Fetching rounds from Supabase');
   
   let targetUserId = userId;
@@ -174,7 +214,7 @@ export const getRounds = async (userId?: string): Promise<Round[]> => {
 // RATING OPERATIONS
 // ============================================
 
-export const saveRating = async (ratingData: CourseRating): Promise<void> => {
+const saveRating = async (ratingData: CourseRating): Promise<void> => {
   console.log('Saving rating to Supabase:', ratingData);
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -212,7 +252,7 @@ export const saveRating = async (ratingData: CourseRating): Promise<void> => {
   console.log('Rating saved successfully');
 };
 
-export const getRatings = async (userId?: string): Promise<CourseRating[]> => {
+const getRatings = async (userId?: string): Promise<CourseRating[]> => {
   console.log('Fetching ratings from Supabase');
   
   let targetUserId = userId;
@@ -259,7 +299,7 @@ export const getRatings = async (userId?: string): Promise<CourseRating[]> => {
 // SOCIAL FEED OPERATIONS
 // ============================================
 
-export const saveFeedEvent = async (eventData: Omit<FeedEvent, 'id' | 'timestamp'>): Promise<void> => {
+const saveFeedEvent = async (eventData: Omit<FeedEvent, 'id' | 'timestamp'>): Promise<void> => {
   console.log('Saving feed event to Supabase:', eventData);
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -294,7 +334,7 @@ export const saveFeedEvent = async (eventData: Omit<FeedEvent, 'id' | 'timestamp
   console.log('Feed event saved successfully');
 };
 
-export const getFeedEvents = async (): Promise<FeedEvent[]> => {
+const getFeedEvents = async (): Promise<FeedEvent[]> => {
   console.log('Fetching feed events from Supabase');
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -346,7 +386,7 @@ export const getFeedEvents = async (): Promise<FeedEvent[]> => {
 // BADGE OPERATIONS
 // ============================================
 
-export const saveBadge = async (badgeData: Omit<Badge, 'earnedAt'>): Promise<void> => {
+const saveBadge = async (badgeData: Omit<Badge, 'earnedAt'>): Promise<void> => {
   console.log('Saving badge to Supabase:', badgeData);
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -374,7 +414,7 @@ export const saveBadge = async (badgeData: Omit<Badge, 'earnedAt'>): Promise<voi
   console.log('Badge saved successfully');
 };
 
-export const getBadges = async (userId?: string): Promise<Badge[]> => {
+const getBadges = async (userId?: string): Promise<Badge[]> => {
   console.log('Fetching badges from Supabase');
   
   let targetUserId = userId;
@@ -409,4 +449,84 @@ export const getBadges = async (userId?: string): Promise<Badge[]> => {
 
   console.log(`Fetched ${badges.length} badges`);
   return badges;
+};
+
+// ============================================
+// EXPORT ALL OPERATIONS AS A SERVICE
+// ============================================
+
+export const SupabaseStorageService = {
+  // Profile operations
+  saveProfile,
+  getProfile,
+  
+  // Round operations
+  saveRound,
+  getRounds,
+  updateRound: async (roundId: string, updatedRound: Round): Promise<void> => {
+    console.log('Updating round in Supabase:', roundId);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const round = {
+      course_id: updatedRound.courseId,
+      course_name: updatedRound.courseName,
+      course_location: updatedRound.courseLocation,
+      date_played: updatedRound.datePlayed,
+      score: updatedRound.score || null,
+      tee_box: updatedRound.teeBox || null,
+      yardage: updatedRound.yardage || null,
+      review: updatedRound.review || null,
+    };
+
+    const { error } = await supabase
+      .from('rounds')
+      .update(round)
+      .eq('id', roundId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error updating round:', error);
+      throw error;
+    }
+
+    console.log('Round updated successfully');
+  },
+  
+  deleteRound: async (roundId: string): Promise<void> => {
+    console.log('Deleting round from Supabase:', roundId);
+    
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('No authenticated user');
+    }
+
+    const { error } = await supabase
+      .from('rounds')
+      .delete()
+      .eq('id', roundId)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error deleting round:', error);
+      throw error;
+    }
+
+    console.log('Round deleted successfully');
+  },
+  
+  // Rating operations
+  saveRating,
+  getRatings,
+  
+  // Social feed operations
+  saveFeedEvent,
+  getFeedEvents,
+  
+  // Badge operations
+  awardBadge: saveBadge,
+  getBadges,
 };

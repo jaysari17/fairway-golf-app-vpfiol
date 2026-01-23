@@ -148,11 +148,33 @@ export default function ProfileScreen() {
     return colors.error;
   };
 
-  if (profileLoading || !profile || !editedProfile) {
+  if (profileLoading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
         <View style={styles.loadingContainer}>
           <Text style={[styles.loadingText, { color: themeColors.text }]}>Loading profile...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!profile || !editedProfile) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: themeColors.background }]}>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.errorText, { color: colors.error }]}>Unable to load profile</Text>
+          <Text style={[styles.errorSubtext, { color: themeColors.text }]}>
+            Please check your internet connection and try again
+          </Text>
+          <TouchableOpacity
+            style={[styles.retryButton, { backgroundColor: colors.primary }]}
+            onPress={() => {
+              console.log('User tapped retry button');
+              router.replace('/login');
+            }}
+          >
+            <Text style={styles.retryButtonText}>Sign Out and Retry</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -383,6 +405,29 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+  },
+  errorText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  errorSubtext: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginBottom: 24,
+    paddingHorizontal: 40,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
