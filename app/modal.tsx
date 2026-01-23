@@ -117,7 +117,7 @@ export default function SelectCourseModal() {
     const result = await testGolfCourseApi();
     
     Alert.alert(
-      result.success ? '✅ Golf Course Search Active' : '⚠️ Golf Course Search Status',
+      result.success ? '✅ Worldwide Golf Course Database' : '⚠️ Golf Course Search Status',
       result.message,
       [{ text: 'OK' }]
     );
@@ -144,7 +144,7 @@ export default function SelectCourseModal() {
                 Select a Course
               </Text>
               <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Search 400+ courses worldwide
+                🌍 Search 400+ courses from 50+ countries
               </Text>
             </View>
             <TouchableOpacity
@@ -178,7 +178,7 @@ export default function SelectCourseModal() {
             />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Search: Pebble Beach, St Andrews, Dubai, Tokyo..."
+              placeholder="Try: Pebble Beach, St Andrews, Dubai, Tokyo, Paris..."
               placeholderTextColor={theme.dark ? '#98989D' : '#666'}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -230,7 +230,7 @@ export default function SelectCourseModal() {
                 color={theme.dark ? '#98989D' : '#666'}
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses • Try searching above
+                Popular courses • Search above for any course worldwide
               </Text>
             </View>
           )}
@@ -252,9 +252,9 @@ export default function SelectCourseModal() {
                 No courses found for &quot;{searchQuery}&quot;. Try searching for:
               </Text>
               <Text style={[styles.noResultsSuggestions, { color: theme.dark ? '#98989D' : '#666' }]}>
-                • Course name: &quot;Pebble Beach&quot;, &quot;St Andrews&quot;{'\n'}
-                • City: &quot;Augusta&quot;, &quot;Scottsdale&quot;{'\n'}
-                • Country: &quot;Scotland&quot;, &quot;Ireland&quot;
+                • Course name: &quot;Pebble Beach&quot;, &quot;St Andrews&quot;, &quot;Augusta&quot;{'\n'}
+                • City: &quot;Scottsdale&quot;, &quot;Dubai&quot;, &quot;Tokyo&quot;{'\n'}
+                • Country: &quot;Scotland&quot;, &quot;Ireland&quot;, &quot;Australia&quot;
               </Text>
               <TouchableOpacity
                 style={[styles.clearSearchButton, { backgroundColor: colors.primary }]}
