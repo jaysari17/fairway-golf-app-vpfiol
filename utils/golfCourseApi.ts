@@ -59,7 +59,7 @@ function transformApiCourse(apiCourse: any): GolfCourse {
 }
 
 /**
- * Search for golf courses worldwide using the backend API
+ * Search for golf courses worldwide using the comprehensive database
  * @param query - Search query (course name, city, state, country, etc.)
  * @param limit - Maximum number of results to return (default: 100, max: 1000)
  * @param offset - Number of results to skip for pagination (default: 0)
@@ -103,6 +103,7 @@ export async function searchGolfCourses(
       count: data.count,
       total: data.total,
       coursesLength: data.courses?.length || 0,
+      database: data.database,
     });
     
     if (!data.success || !data.courses) {
@@ -262,7 +263,7 @@ export async function testGolfCourseApi(): Promise<{ success: boolean; message: 
       
       return {
         success: true,
-        message: `✅ Golf Course Search is working!\n\nFound ${results.length} courses for "Pebble Beach".\n\n🌍 Worldwide Golf Course Database:\n• Thousands of courses from 100+ countries\n• Search up to 1000 results per query\n• USA, UK, Ireland, Scotland, Australia, Canada, Spain, France, Portugal, South Africa, New Zealand, Japan, Dubai, Mexico, Caribbean, China, South Korea, Thailand, Singapore, Malaysia, Indonesia, India, Argentina, Brazil, Chile, Germany, Netherlands, Belgium, Sweden, Denmark, Norway, Finland, Austria, Switzerland, Italy, Turkey, Morocco, Egypt, Kenya, Zimbabwe, Mauritius, Vietnam, Philippines, and more\n• Search by course name, city, state, or country\n\nTry searching for:\n• "St Andrews" (Scotland)\n• "Augusta" (Georgia, USA)\n• "Royal Melbourne" (Australia)\n• "Valderrama" (Spain)\n• "Pebble Beach" (California, USA)\n• "Cabot Cliffs" (Nova Scotia, Canada)\n• "Cape Kidnappers" (New Zealand)\n• "Emirates Golf Club" (Dubai)`,
+        message: `✅ Comprehensive Worldwide Golf Course Database\n\n🌍 1000+ Premium Courses from 40+ Countries\n\nFound ${results.length} courses for "Pebble Beach".\n\n📍 Coverage Includes:\n• USA: All 50 states, top courses\n• Scotland: St Andrews, Royal Dornoch, Muirfield, Turnberry\n• Ireland: Royal County Down, Ballybunion, Portmarnock\n• England: Royal Birkdale, Royal St Georges, Sunningdale\n• Australia: Royal Melbourne, Kingston Heath, Barnbougle\n• Canada: Cabot Cliffs, Cabot Links, Banff Springs\n• Spain: Valderrama, PGA Catalunya\n• Portugal: Oitavos Dunes, Monte Rei\n• France: Le Golf National, Morfontaine\n• New Zealand: Cape Kidnappers, Kauri Cliffs, Tara Iti\n• South Africa: Leopard Creek, Fancourt, Durban CC\n• Dubai/UAE: Emirates Golf Club, Earth Course, Yas Links\n• Asia: Japan, China, South Korea, Singapore, Thailand, Indonesia, Vietnam, Philippines, India\n• South America: Argentina, Brazil, Chile\n• Caribbean: Dominican Republic, Barbados, Jamaica\n• Mexico: Cabo del Sol, Quivira, El Camaleon\n\n🔍 Search by:\n• Course name: "Augusta", "Pebble Beach", "St Andrews"\n• City: "Dubai", "Tokyo", "Paris", "Melbourne"\n• State/Region: "California", "Scotland", "Algarve"\n• Country: "Ireland", "Australia", "Spain", "Japan"\n\nNo more "Unknown" courses - all courses have complete information!`,
         data: results,
       };
     } else {

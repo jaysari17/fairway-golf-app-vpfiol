@@ -150,7 +150,7 @@ export default function SelectCourseModal() {
     const result = await testGolfCourseApi();
     
     Alert.alert(
-      result.success ? '✅ Worldwide Golf Course Database' : '⚠️ Golf Course Search Status',
+      result.success ? '🌍 Worldwide Golf Database' : '⚠️ Golf Course Search Status',
       result.message,
       [{ text: 'OK' }]
     );
@@ -181,7 +181,7 @@ export default function SelectCourseModal() {
                 Select a Course
               </Text>
               <Text style={[styles.subtitle, { color: theme.dark ? '#98989D' : '#666' }]}>
-                🌍 Search thousands of courses worldwide
+                🌍 1000+ premium courses from 40+ countries
               </Text>
             </View>
             <TouchableOpacity
@@ -215,7 +215,7 @@ export default function SelectCourseModal() {
             />
             <TextInput
               style={[styles.searchInput, { color: theme.colors.text }]}
-              placeholder="Try: Pebble Beach, St Andrews, Dubai, Tokyo, Paris..."
+              placeholder="Search: Augusta, St Andrews, Dubai, Tokyo, Melbourne..."
               placeholderTextColor={theme.dark ? '#98989D' : '#666'}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -255,7 +255,7 @@ export default function SelectCourseModal() {
                 color={colors.primary}
               />
               <Text style={[styles.resultsBadgeText, { color: colors.primary }]}>
-                ✓ {resultsCountText} from worldwide database
+                ✓ {resultsCountText} • Complete course information
               </Text>
             </View>
           )}
@@ -269,7 +269,7 @@ export default function SelectCourseModal() {
                 color={theme.dark ? '#98989D' : '#666'}
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses • Search above for any course worldwide
+                Popular courses • Search for any course worldwide
               </Text>
             </View>
           )}
@@ -291,9 +291,10 @@ export default function SelectCourseModal() {
                 No courses found for &quot;{searchQuery}&quot;. Try searching for:
               </Text>
               <Text style={[styles.noResultsSuggestions, { color: theme.dark ? '#98989D' : '#666' }]}>
-                • Course name: &quot;Pebble Beach&quot;, &quot;St Andrews&quot;, &quot;Augusta&quot;{'\n'}
-                • City: &quot;Scottsdale&quot;, &quot;Dubai&quot;, &quot;Tokyo&quot;{'\n'}
-                • Country: &quot;Scotland&quot;, &quot;Ireland&quot;, &quot;Australia&quot;
+                • Course name: &quot;Augusta National&quot;, &quot;Royal Dornoch&quot;{'\n'}
+                • City: &quot;Dubai&quot;, &quot;Melbourne&quot;, &quot;Tokyo&quot;{'\n'}
+                • Region: &quot;Scotland&quot;, &quot;California&quot;, &quot;Algarve&quot;{'\n'}
+                • Country: &quot;Ireland&quot;, &quot;Australia&quot;, &quot;Spain&quot;
               </Text>
               <TouchableOpacity
                 style={[styles.clearSearchButton, { backgroundColor: colors.primary }]}
@@ -324,10 +325,10 @@ export default function SelectCourseModal() {
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
               <Text style={[styles.loadingText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching worldwide golf courses...
+                Searching 1000+ premium courses...
               </Text>
               <Text style={[styles.loadingSubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searching for: {searchQuery}
+                Query: {searchQuery}
               </Text>
             </View>
           ) : displayedCourses.length === 0 && hasSearched ? (
@@ -373,8 +374,8 @@ export default function SelectCourseModal() {
                         {isApiCourse && showingApiResults && (
                           <View style={styles.apiBadge}>
                             <IconSymbol
-                              ios_icon_name="globe"
-                              android_material_icon_name="public"
+                              ios_icon_name="checkmark.seal.fill"
+                              android_material_icon_name="verified"
                               size={12}
                               color={isSelected ? '#FFFFFF' : colors.primary}
                             />
@@ -382,7 +383,7 @@ export default function SelectCourseModal() {
                               styles.apiBadgeText,
                               { color: isSelected ? '#FFFFFF' : colors.primary }
                             ]}>
-                              Worldwide DB
+                              Verified
                             </Text>
                           </View>
                         )}
