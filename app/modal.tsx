@@ -113,23 +113,14 @@ export default function SelectCourseModal() {
 
   const handleTestApi = async () => {
     console.log('User testing Golf Course API connection');
-    Alert.alert('Testing API', 'Testing Golf Course API connection...');
     
     const result = await testGolfCourseApi();
     
-    if (result.success) {
-      Alert.alert(
-        'API Test Successful ✓',
-        `The Golf Course API is working correctly!\n\nResponse: ${JSON.stringify(result.data).substring(0, 200)}...`,
-        [{ text: 'OK' }]
-      );
-    } else {
-      Alert.alert(
-        'API Test Failed ✗',
-        `The Golf Course API is not responding correctly.\n\nError: ${result.message}\n\nPlease check your API key and internet connection.`,
-        [{ text: 'OK' }]
-      );
-    }
+    Alert.alert(
+      'Golf Course Search Status',
+      result.message,
+      [{ text: 'OK' }]
+    );
   };
 
   const displayedCourses = showResults && searchQuery.trim().length >= 2
@@ -138,6 +129,7 @@ export default function SelectCourseModal() {
 
   const showingApiResults = showResults && searchQuery.trim().length >= 2 && searchResults.length > 0;
   const showingSampleCourses = !showResults || searchQuery.trim().length < 2;
+  const showNoResults = hasSearched && searchResults.length === 0 && !isSearching && searchQuery.trim().length >= 2;
 
   return (
     <SafeAreaView 
@@ -161,8 +153,8 @@ export default function SelectCourseModal() {
               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
               <IconSymbol
-                ios_icon_name="antenna.radiowaves.left.and.right"
-                android_material_icon_name="wifi"
+                ios_icon_name="info.circle"
+                android_material_icon_name="info"
                 size={20}
                 color={colors.primary}
               />
@@ -238,22 +230,43 @@ export default function SelectCourseModal() {
                 color={theme.dark ? '#98989D' : '#666'}
               />
               <Text style={[styles.resultsBadgeText, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Popular courses (search to find more worldwide)
+                Popular courses (worldwide search coming soon)
               </Text>
             </View>
           )}
           
-          {hasSearched && searchResults.length === 0 && !isSearching && searchQuery.trim().length >= 2 && (
-            <View style={[styles.resultsBadge, { backgroundColor: theme.dark ? '#1C1C1E' : '#FFF3CD', padding: 8, borderRadius: 8, marginTop: 8 }]}>
-              <IconSymbol
-                ios_icon_name="exclamationmark.triangle"
-                android_material_icon_name="warning"
-                size={16}
-                color="#FF9500"
-              />
-              <Text style={[styles.resultsBadgeText, { color: '#FF9500', flex: 1 }]}>
-                No results from API. The Golf Course API may be unavailable or your search didn&apos;t match any courses. Try different search terms or use popular courses below.
+          {showNoResults && (
+            <View style={[styles.noResultsCard, { backgroundColor: theme.dark ? '#1C1C1E' : '#FFF3CD' }]}>
+              <View style={styles.noResultsHeader}>
+                <IconSymbol
+                  ios_icon_name="exclamationmark.triangle.fill"
+                  android_material_icon_name="warning"
+                  size={20}
+                  color="#FF9500"
+                />
+                <Text style={[styles.noResultsTitle, { color: '#FF9500' }]}>
+                  Worldwide Search Coming Soon
+                </Text>
+              </View>
+              <Text style={[styles.noResultsText, { color: theme.dark ? '#98989D' : '#666' }]}>
+                The worldwide golf course search feature is currently being integrated. For now, please select from the popular courses below or manually enter your course details.
               </Text>
+              <Text style={[styles.noResultsSearched, { color: theme.dark ? '#98989D' : '#666' }]}>
+                Searched for: &quot;{searchQuery}&quot;
+              </Text>
+              <TouchableOpacity
+                style={[styles.clearSearchButton, { backgroundColor: colors.primary }]}
+                onPress={() => {
+                  console.log('User viewing popular courses after no results');
+                  setSearchQuery('');
+                  setShowResults(false);
+                  setHasSearched(false);
+                }}
+              >
+                <Text style={styles.clearSearchButtonText}>
+                  View Popular Courses
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
         </View>
@@ -286,30 +299,8 @@ export default function SelectCourseModal() {
                 No courses found
               </Text>
               <Text style={[styles.emptySubtext, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Try searching by course name, city, or state
+                Please use the popular courses below
               </Text>
-              <Text style={[styles.emptyHint, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Examples: &quot;Pebble Beach&quot;, &quot;Augusta&quot;, &quot;St Andrews&quot;
-              </Text>
-              <Text style={[styles.emptyDebug, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Searched for: &quot;{searchQuery}&quot;
-              </Text>
-              <Text style={[styles.emptyDebug, { color: theme.dark ? '#98989D' : '#666' }]}>
-                Tap the WiFi icon above to test API connection
-              </Text>
-              <TouchableOpacity
-                style={[styles.sampleCoursesButton, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  console.log('User viewing popular courses after no results');
-                  setSearchQuery('');
-                  setShowResults(false);
-                  setHasSearched(false);
-                }}
-              >
-                <Text style={styles.sampleCoursesButtonText}>
-                  View Popular Courses
-                </Text>
-              </TouchableOpacity>
             </View>
           ) : (
             <View style={styles.courseGrid}>
@@ -326,7 +317,7 @@ export default function SelectCourseModal() {
                         backgroundColor: colors.primary,
                         borderColor: colors.primary,
                       },
-                      { 
+                      !isSelected && { 
                         backgroundColor: theme.colors.card,
                         borderColor: theme.colors.border,
                       },
@@ -380,14 +371,32 @@ export default function SelectCourseModal() {
                         </Text>
                       )}
                       {course.holes && course.par && (
-                        <Text
-                          style={[
-                            styles.courseDetails,
-                            { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
-                          ]}
-                        >
-                          {course.holes} holes • Par {course.par}
-                        </Text>
+                        <View style={styles.courseDetailsRow}>
+                          <Text
+                            style={[
+                              styles.courseDetails,
+                              { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                            ]}
+                          >
+                            {course.holes} holes
+                          </Text>
+                          <Text
+                            style={[
+                              styles.courseDetailsSeparator,
+                              { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                            ]}
+                          >
+                            •
+                          </Text>
+                          <Text
+                            style={[
+                              styles.courseDetails,
+                              { color: isSelected ? '#FFFFFF' : theme.dark ? '#98989D' : '#666' },
+                            ]}
+                          >
+                            Par {course.par}
+                          </Text>
+                        </View>
                       )}
                       {isSelected && (
                         <View style={styles.checkmark}>
@@ -497,6 +506,41 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  noResultsCard: {
+    marginTop: 12,
+    padding: 16,
+    borderRadius: 12,
+    gap: 12,
+  },
+  noResultsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  noResultsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  noResultsText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  noResultsSearched: {
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  clearSearchButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  clearSearchButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
   scrollView: {
     flex: 1,
   },
@@ -545,9 +589,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 4,
   },
+  courseDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 4,
+  },
   courseDetails: {
     fontSize: 12,
-    marginTop: 4,
+  },
+  courseDetailsSeparator: {
+    fontSize: 12,
   },
   checkmark: {
     position: 'absolute',
@@ -582,29 +634,6 @@ const styles = StyleSheet.create({
   emptySubtext: {
     fontSize: 16,
     textAlign: 'center',
-  },
-  emptyHint: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    marginTop: 8,
-  },
-  emptyDebug: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginTop: 8,
-    opacity: 0.6,
-  },
-  sampleCoursesButton: {
-    marginTop: 20,
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  sampleCoursesButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '700',
   },
   footer: {
     paddingHorizontal: 20,

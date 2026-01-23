@@ -4,12 +4,8 @@ import { GolfCourse } from '@/types/golf';
 // Golf Course API Configuration
 const GOLF_COURSE_API_KEY = process.env.EXPO_PUBLIC_GOLF_COURSE_API_KEY || 'U2RVDJNGLFSNE5B2MAOAZGX2SM';
 
-// Try multiple API endpoints in case one is down
-const API_ENDPOINTS = [
-  'https://api.golfcourseapi.com/v1',
-  'https://golf-courses-api.herokuapp.com/courses',
-  'https://api.opengolf.io/v1',
-];
+// Backend API endpoint (will be created)
+const BACKEND_API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
 
 export interface GolfCourseApiResponse {
   id?: number;
@@ -65,97 +61,7 @@ function transformApiCourse(apiCourse: any): GolfCourse {
 }
 
 /**
- * Try fetching from multiple API endpoints
- */
-async function fetchWithFallback(path: string, options: RequestInit = {}): Promise<Response | null> {
-  const errors: string[] = [];
-  
-  // Try primary endpoint with API key
-  try {
-    console.log('Trying primary API endpoint with key authentication...');
-    const url = `${API_ENDPOINTS[0]}${path}${path.includes('?') ? '&' : '?'}key=${GOLF_COURSE_API_KEY}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      },
-    });
-    
-    if (response.ok) {
-      console.log('Primary API endpoint succeeded');
-      return response;
-    }
-    
-    const errorText = await response.text();
-    errors.push(`Primary API (${response.status}): ${errorText}`);
-    console.warn('Primary API failed:', response.status, errorText);
-  } catch (error) {
-    errors.push(`Primary API error: ${error instanceof Error ? error.message : 'Unknown'}`);
-    console.error('Primary API error:', error);
-  }
-  
-  // Try with Bearer token authentication
-  try {
-    console.log('Trying Bearer token authentication...');
-    const url = `${API_ENDPOINTS[0]}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'Authorization': `Bearer ${GOLF_COURSE_API_KEY}`,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      },
-    });
-    
-    if (response.ok) {
-      console.log('Bearer token authentication succeeded');
-      return response;
-    }
-    
-    const errorText = await response.text();
-    errors.push(`Bearer auth (${response.status}): ${errorText}`);
-    console.warn('Bearer auth failed:', response.status, errorText);
-  } catch (error) {
-    errors.push(`Bearer auth error: ${error instanceof Error ? error.message : 'Unknown'}`);
-    console.error('Bearer auth error:', error);
-  }
-  
-  // Try with X-API-Key header
-  try {
-    console.log('Trying X-API-Key header authentication...');
-    const url = `${API_ENDPOINTS[0]}${path}`;
-    const response = await fetch(url, {
-      ...options,
-      headers: {
-        'X-API-Key': GOLF_COURSE_API_KEY,
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        ...options.headers,
-      },
-    });
-    
-    if (response.ok) {
-      console.log('X-API-Key authentication succeeded');
-      return response;
-    }
-    
-    const errorText = await response.text();
-    errors.push(`X-API-Key (${response.status}): ${errorText}`);
-    console.warn('X-API-Key failed:', response.status, errorText);
-  } catch (error) {
-    errors.push(`X-API-Key error: ${error instanceof Error ? error.message : 'Unknown'}`);
-    console.error('X-API-Key error:', error);
-  }
-  
-  console.error('All API authentication methods failed:', errors);
-  return null;
-}
-
-/**
- * Search for golf courses worldwide using the Golf Course API
+ * Search for golf courses worldwide using the backend API
  * @param query - Search query (course name, city, state, etc.)
  * @param limit - Maximum number of results to return (default: 20)
  * @returns Array of golf courses matching the search query
@@ -171,49 +77,21 @@ export async function searchGolfCourses(
 
   try {
     console.log('Golf Course Search: Searching for:', query);
-    console.log('Golf Course Search: API Key present:', !!GOLF_COURSE_API_KEY);
-    console.log('Golf Course Search: API Key length:', GOLF_COURSE_API_KEY?.length);
     
-    // Try different query parameter names
-    const queryParams = [
-      `/courses?q=${encodeURIComponent(query)}&limit=${limit}`,
-      `/courses?name=${encodeURIComponent(query)}&limit=${limit}`,
-      `/courses?search=${encodeURIComponent(query)}&limit=${limit}`,
-    ];
+    // TODO: Backend Integration - GET /api/golf-courses/search?q={query}&limit={limit}
+    // This endpoint should:
+    // - Accept query parameter 'q' for search term
+    // - Accept query parameter 'limit' for max results (default 20)
+    // - Return array of golf courses: [{ id, name, city, state, country, holes, par, yardage, type, website, phone, latitude, longitude }]
+    // - Handle authentication with the Golf Course API on the backend
+    // - Implement caching to avoid rate limits
+    // - Return empty array if no results found
     
-    for (const params of queryParams) {
-      console.log('Trying query params:', params);
-      const response = await fetchWithFallback(params);
-      
-      if (response && response.ok) {
-        const data = await response.json();
-        console.log('Golf Course Search: Raw API response type:', typeof data);
-        console.log('Golf Course Search: Raw API response keys:', Object.keys(data || {}));
-        console.log('Golf Course Search: Raw API response sample:', JSON.stringify(data).substring(0, 500));
-        
-        // The API might return courses in different formats
-        let courses = [];
-        if (Array.isArray(data)) {
-          courses = data;
-        } else if (data.courses && Array.isArray(data.courses)) {
-          courses = data.courses;
-        } else if (data.data && Array.isArray(data.data)) {
-          courses = data.data;
-        } else if (data.results && Array.isArray(data.results)) {
-          courses = data.results;
-        }
-        
-        console.log('Golf Course Search: Found', courses.length, 'courses from API');
-
-        if (courses.length > 0) {
-          const transformedCourses = courses.map(transformApiCourse);
-          console.log('Golf Course Search: Successfully transformed', transformedCourses.length, 'courses');
-          return transformedCourses;
-        }
-      }
-    }
+    console.log('Golf Course Search: Backend integration pending');
+    console.log('Golf Course Search: Would call:', `${BACKEND_API_URL}/api/golf-courses/search?q=${encodeURIComponent(query)}&limit=${limit}`);
     
-    console.log('Golf Course Search: No courses found for query:', query);
+    // For now, return empty array until backend is ready
+    // The UI will show the "No results from API" message and suggest popular courses
     return [];
   } catch (error) {
     console.error('Error searching golf courses:', error);
@@ -235,21 +113,14 @@ export async function getGolfCourseById(courseId: string): Promise<GolfCourse | 
   try {
     console.log('Golf Course Search: Fetching course by ID:', courseId);
     
-    const response = await fetchWithFallback(`/courses/${courseId}`);
+    // TODO: Backend Integration - GET /api/golf-courses/{courseId}
+    // This endpoint should:
+    // - Accept courseId as path parameter
+    // - Return single golf course object or 404 if not found
+    // - Return: { id, name, city, state, country, holes, par, yardage, type, website, phone, latitude, longitude }
     
-    if (!response || !response.ok) {
-      console.error('Golf Course Search error: Failed to fetch course');
-      return null;
-    }
-
-    const data = await response.json();
-    const course = data.course || data.data || data;
-    
-    if (!course) {
-      return null;
-    }
-    
-    return transformApiCourse(course);
+    console.log('Golf Course Search: Backend integration pending');
+    return null;
   } catch (error) {
     console.error('Error fetching golf course:', error);
     return null;
@@ -268,15 +139,9 @@ export async function searchGolfCoursesByState(
   }
 
   try {
-    const response = await fetchWithFallback(`/courses?state=${encodeURIComponent(state)}&limit=${limit}`);
-    
-    if (!response || !response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    const courses = data.courses || data.data || data || [];
-    return courses.map(transformApiCourse);
+    // TODO: Backend Integration - GET /api/golf-courses/search?state={state}&limit={limit}
+    console.log('Golf Course Search: Backend integration pending for state search');
+    return [];
   } catch (error) {
     console.error('Error searching golf courses by state:', error);
     return [];
@@ -296,20 +161,9 @@ export async function searchGolfCoursesByCity(
   }
 
   try {
-    let path = `/courses?city=${encodeURIComponent(city)}&limit=${limit}`;
-    if (state) {
-      path += `&state=${encodeURIComponent(state)}`;
-    }
-    
-    const response = await fetchWithFallback(path);
-    
-    if (!response || !response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    const courses = data.courses || data.data || data || [];
-    return courses.map(transformApiCourse);
+    // TODO: Backend Integration - GET /api/golf-courses/search?city={city}&state={state}&limit={limit}
+    console.log('Golf Course Search: Backend integration pending for city search');
+    return [];
   } catch (error) {
     console.error('Error searching golf courses by city:', error);
     return [];
@@ -328,15 +182,9 @@ export async function searchGolfCoursesByCountry(
   }
 
   try {
-    const response = await fetchWithFallback(`/courses?country=${encodeURIComponent(country)}&limit=${limit}`);
-    
-    if (!response || !response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    const courses = data.courses || data.data || data || [];
-    return courses.map(transformApiCourse);
+    // TODO: Backend Integration - GET /api/golf-courses/search?country={country}&limit={limit}
+    console.log('Golf Course Search: Backend integration pending for country search');
+    return [];
   } catch (error) {
     console.error('Error searching golf courses by country:', error);
     return [];
@@ -348,36 +196,15 @@ export async function searchGolfCoursesByCountry(
  */
 export async function testGolfCourseApi(): Promise<{ success: boolean; message: string; data?: any }> {
   console.log('=== TESTING GOLF COURSE API ===');
-  console.log('API Key present:', !!GOLF_COURSE_API_KEY);
-  console.log('API Key length:', GOLF_COURSE_API_KEY?.length);
-  console.log('API Key first 10 chars:', GOLF_COURSE_API_KEY?.substring(0, 10));
   
   try {
-    const testQuery = 'Pebble';
-    const response = await fetchWithFallback(`/courses?q=${encodeURIComponent(testQuery)}&limit=5`);
-    
-    if (!response) {
-      return {
-        success: false,
-        message: 'All API authentication methods failed. The API may be down or the API key is invalid.',
-      };
-    }
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      return {
-        success: false,
-        message: `API returned status ${response.status}: ${response.statusText}. Error: ${errorText}`,
-      };
-    }
-    
-    const data = await response.json();
-    console.log('Test API Response:', JSON.stringify(data).substring(0, 500));
+    // TODO: Backend Integration - GET /api/golf-courses/test
+    // This endpoint should test the Golf Course API connection and return status
+    // Return: { success: boolean, message: string, data?: any }
     
     return {
-      success: true,
-      message: 'API connection successful',
-      data: data,
+      success: false,
+      message: 'Golf Course API integration is pending. The backend endpoint needs to be created to handle golf course searches securely. For now, please use the popular courses shown below.',
     };
   } catch (error) {
     console.error('Test API Error:', error);
