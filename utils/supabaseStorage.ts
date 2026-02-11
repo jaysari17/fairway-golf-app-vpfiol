@@ -314,7 +314,7 @@ const saveFeedEvent = async (eventData: Omit<FeedEvent, 'id' | 'timestamp'>): Pr
     course_name: eventData.courseName || null,
     course_location: eventData.courseLocation || null,
     round_id: eventData.roundId || null,
-    rating: eventData.rating || null,
+    rating: eventData.rating ? parseFloat(eventData.rating.toString()) : null,
     score: eventData.score || null,
     photo_url: eventData.photoUrl || null,
     comment: eventData.comment || null,
@@ -374,7 +374,7 @@ const getFeedEvents = async (): Promise<FeedEvent[]> => {
     photoUrl: row.photo_url,
     comment: row.comment,
     timestamp: new Date(row.created_at),
-    likes: row.likes_count || 0,
+    likes: [], // Changed from number to array to match FeedEvent type
     comments: [],
   }));
 
@@ -452,6 +452,78 @@ const getBadges = async (userId?: string): Promise<Badge[]> => {
 };
 
 // ============================================
+// SOCIAL OPERATIONS
+// ============================================
+
+const followUser = async (userId: string): Promise<void> => {
+  console.log('Following user in Supabase:', userId);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const { error } = await supabase
+    .from('followers')
+    .insert({
+      follower_id: user.id,
+      following_id: userId,
+    });
+
+  if (error) {
+    console.error('Error following user:', error);
+    throw error;
+  }
+
+  console.log('User followed successfully');
+};
+
+const unfollowUser = async (userId: string): Promise<void> => {
+  console.log('Unfollowing user in Supabase:', userId);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  const { error } = await supabase
+    .from('followers')
+    .delete()
+    .eq('follower_id', user.id)
+    .eq('following_id', userId);
+
+  if (error) {
+    console.error('Error unfollowing user:', error);
+    throw error;
+  }
+
+  console.log('User unfollowed successfully');
+};
+
+const createFeedEvent = async (event: Omit<FeedEvent, 'id' | 'timestamp'>): Promise<void> => {
+  await saveFeedEvent(event);
+};
+
+const likeFeedEvent = async (eventId: string): Promise<void> => {
+  console.log('Liking feed event in Supabase:', eventId);
+  
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    throw new Error('No authenticated user');
+  }
+
+  // Call the increment_likes function
+  const { error } = await supabase.rpc('increment_likes', { event_id: eventId });
+
+  if (error) {
+    console.error('Error liking feed event:', error);
+    throw error;
+  }
+
+  console.log('Feed event liked successfully');
+};
+
+// ============================================
 // EXPORT ALL OPERATIONS AS A SERVICE
 // ============================================
 
@@ -525,6 +597,12 @@ export const SupabaseStorageService = {
   // Social feed operations
   saveFeedEvent,
   getFeedEvents,
+  createFeedEvent,
+  likeFeedEvent,
+  
+  // Social operations
+  followUser,
+  unfollowUser,
   
   // Badge operations
   awardBadge: saveBadge,
