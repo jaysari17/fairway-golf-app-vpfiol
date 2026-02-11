@@ -89,22 +89,15 @@ const getProfile = async (userId?: string): Promise<UserProfile | null> => {
     .from('profiles')
     .select('*')
     .eq('user_id', targetUserId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('SupabaseStorage.getProfile: Error fetching profile:', error.message, error.details, error.hint);
-    
-    // If no rows found, return null (not an error, just no profile yet)
-    if (error.code === 'PGRST116') {
-      console.log('SupabaseStorage.getProfile: No profile found in database (PGRST116)');
-      return null;
-    }
-    
     return null;
   }
 
   if (!data) {
-    console.log('SupabaseStorage.getProfile: Query succeeded but no data returned');
+    console.log('SupabaseStorage.getProfile: No profile found in database - this is normal for new users');
     return null;
   }
 

@@ -9,8 +9,8 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -29,6 +29,8 @@ export default function ProfileSetupScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [handicap, setHandicap] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showEmailConfirmModal, setShowEmailConfirmModal] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState('');
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,22 +46,22 @@ export default function ProfileSetupScreen() {
     console.log('User tapped Create Account button');
     
     if (!username.trim()) {
-      Alert.alert('Required Field', 'Please enter a username');
+      console.log('Validation failed: username required');
       return;
     }
 
     if (!email.trim() || !validateEmail(email)) {
-      Alert.alert('Invalid Email', 'Please enter a valid email address');
+      console.log('Validation failed: invalid email');
       return;
     }
 
     if (!password.trim() || password.length < 6) {
-      Alert.alert('Invalid Password', 'Password must be at least 6 characters');
+      console.log('Validation failed: password too short');
       return;
     }
 
     if (!phoneNumber.trim() || !validatePhoneNumber(phoneNumber)) {
-      Alert.alert('Invalid Phone', 'Please enter a valid phone number');
+      console.log('Validation failed: invalid phone number');
       return;
     }
 
@@ -71,31 +73,20 @@ export default function ProfileSetupScreen() {
       const { error: signUpError, needsEmailConfirmation } = await signUp(email, password, {
         username: username.trim(),
         phone_number: phoneNumber.trim(),
+        display_name: username.trim(),
+        handicap: handicap ? parseFloat(handicap) : null,
       });
 
       if (signUpError) {
         console.error('Supabase signup error:', signUpError.message);
-        Alert.alert('Signup Error', signUpError.message || 'Failed to create account. Please try again.');
         return;
       }
 
       // Step 2: Check if email confirmation is required
       if (needsEmailConfirmation) {
-        console.log('Email confirmation required - user must verify email before continuing');
-        
-        Alert.alert(
-          'Verify Your Email',
-          `We've sent a confirmation email to ${email}. Please check your inbox and click the verification link to complete your registration.\n\nAfter verifying, return to the app and sign in.`,
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                console.log('Navigating back to login screen');
-                router.replace('/login');
-              }
-            }
-          ]
-        );
+        console.log('Email confirmation required - showing modal');
+        setConfirmationEmail(email);
+        setShowEmailConfirmModal(true);
         return;
       }
 
@@ -128,15 +119,14 @@ export default function ProfileSetupScreen() {
       } catch (profileError: any) {
         console.error('Error saving profile to database:', profileError);
         
-        const errorMessage = profileError.message 
-          ? `Failed to save profile: ${profileError.message}` 
-          : 'Failed to save profile. Please try again.';
-        
-        Alert.alert('Profile Error', errorMessage);
+        // Even if profile save fails, the user is authenticated
+        // Navigate them to the app and they can complete profile later
+        console.log('Profile save failed, but user is authenticated - navigating to app');
+        await StorageService.setOnboardingComplete();
+        router.replace('/contact-sync');
       }
     } catch (error: any) {
       console.error('Unexpected error during profile setup:', error);
-      Alert.alert('Error', error.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -147,12 +137,19 @@ export default function ProfileSetupScreen() {
     router.back();
   };
 
+  const handleEmailConfirmModalClose = () => {
+    console.log('User acknowledged email confirmation requirement');
+    setShowEmailConfirmModal(false);
+    router.replace('/login');
+  };
+
   const usernameValue = username;
   const emailValue = email;
   const passwordValue = password;
   const phoneValue = phoneNumber;
   const handicapValue = handicap;
   const isLoading = loading;
+  const confirmEmailValue = confirmationEmail;
 
   return (
     <LinearGradient
@@ -277,6 +274,31 @@ export default function ProfileSetupScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <Modal
+        visible={showEmailConfirmModal}
+        transparent
+        animationType="fade"
+        onRequestClose={handleEmailConfirmModalClose}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Verify Your Email</Text>
+            <Text style={styles.modalMessage}>
+              We&apos;ve sent a confirmation email to {confirmEmailValue}. Please check your inbox and click the verification link to complete your registration.
+            </Text>
+            <Text style={styles.modalMessage}>
+              After verifying, return to the app and sign in.
+            </Text>
+            <TouchableOpacity
+              style={styles.modalButton}
+              onPress={handleEmailConfirmModalClose}
+            >
+              <Text style={styles.modalButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -384,5 +406,46 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 16,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 24,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  modalButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 8,
+  },
+  modalButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

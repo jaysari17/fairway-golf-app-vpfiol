@@ -9,10 +9,10 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
   Image,
   ImageSourcePropType,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,12 +33,14 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
 
   const handleLogin = async () => {
     console.log('User tapped Sign In button');
     
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Required Fields', 'Please enter both email and password');
+      setShowResendModal(false);
       return;
     }
 
@@ -53,22 +55,8 @@ export default function LoginScreen() {
         
         // Check if it's an email confirmation issue
         if (error.message && error.message.includes('verify your email')) {
-          Alert.alert(
-            'Email Not Verified',
-            error.message,
-            [
-              {
-                text: 'Resend Email',
-                onPress: () => handleResendConfirmation(),
-              },
-              {
-                text: 'OK',
-                style: 'cancel',
-              },
-            ]
-          );
-        } else {
-          Alert.alert('Login Failed', error.message || 'Invalid email or password');
+          setResendEmail(email);
+          setShowResendModal(true);
         }
         return;
       }
@@ -77,7 +65,6 @@ export default function LoginScreen() {
       // Login successful - navigation will be handled by auth state change in _layout.tsx
     } catch (error: any) {
       console.error('Unexpected error during login:', error);
-      Alert.alert('Error', error.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -86,30 +73,26 @@ export default function LoginScreen() {
   const handleResendConfirmation = async () => {
     console.log('User tapped Resend Confirmation Email');
     
-    if (!email.trim()) {
-      Alert.alert('Email Required', 'Please enter your email address');
+    const emailToUse = resendEmail || email;
+    
+    if (!emailToUse.trim()) {
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Resending confirmation email to:', email);
+      console.log('Resending confirmation email to:', emailToUse);
       
-      const { error } = await resendConfirmationEmail(email);
+      const { error } = await resendConfirmationEmail(emailToUse);
       
       if (error) {
         console.error('Resend confirmation failed:', error.message);
-        Alert.alert('Error', error.message || 'Failed to resend confirmation email');
       } else {
         console.log('Confirmation email resent successfully');
-        Alert.alert(
-          'Email Sent',
-          `A new confirmation email has been sent to ${email}. Please check your inbox and click the verification link.`
-        );
+        setShowResendModal(false);
       }
     } catch (error: any) {
       console.error('Unexpected error resending confirmation:', error);
-      Alert.alert('Error', error.message || 'Failed to resend confirmation email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -181,16 +164,6 @@ export default function LoginScreen() {
                   editable={!isLoading}
                 />
               </View>
-
-              <TouchableOpacity
-                onPress={handleResendConfirmation}
-                style={styles.forgotPasswordButton}
-                disabled={isLoading}
-              >
-                <Text style={styles.forgotPasswordText}>
-                  Didn&apos;t receive confirmation email?
-                </Text>
-              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -215,6 +188,42 @@ export default function LoginScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
+
+      <Modal
+        visible={showResendModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowResendModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Email Not Verified</Text>
+            <Text style={styles.modalMessage}>
+              Please verify your email address before signing in. Check your inbox for the confirmation link.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={handleResendConfirmation}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.modalButtonTextPrimary}>Resend Email</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonSecondary]}
+                onPress={() => setShowResendModal(false)}
+                disabled={isLoading}
+              >
+                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -281,16 +290,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.3)',
   },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginTop: 8,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
-    color: '#FFFFFF',
-    opacity: 0.8,
-    textDecorationLine: 'underline',
-  },
   loginButton: {
     backgroundColor: '#FFFFFF',
     paddingVertical: 16,
@@ -325,5 +324,61 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     textDecorationLine: 'underline',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: 16,
+    color: colors.text,
+    lineHeight: 24,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  modalButtons: {
+    gap: 12,
+  },
+  modalButton: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 48,
+  },
+  modalButtonPrimary: {
+    backgroundColor: colors.primary,
+  },
+  modalButtonSecondary: {
+    backgroundColor: 'transparent',
+    borderWidth: 2,
+    borderColor: colors.primary,
+  },
+  modalButtonTextPrimary: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalButtonTextSecondary: {
+    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
