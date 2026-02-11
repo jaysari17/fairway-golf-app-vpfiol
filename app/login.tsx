@@ -35,6 +35,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    console.log('User tapped Sign In button');
+    
     if (!email.trim() || !password.trim()) {
       Alert.alert('Required Fields', 'Please enter both email and password');
       return;
@@ -42,10 +44,13 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
+      console.log('Attempting login for:', email);
 
       const { error } = await signIn(email, password);
 
       if (error) {
+        console.error('Login failed:', error.message);
+        
         // Check if it's an email confirmation issue
         if (error.message && error.message.includes('verify your email')) {
           Alert.alert(
@@ -68,16 +73,19 @@ export default function LoginScreen() {
         return;
       }
 
-      // Login successful - navigation will be handled by auth state change
-    } catch (error) {
-      console.error('Error during login:', error);
-      Alert.alert('Error', 'Failed to login. Please try again.');
+      console.log('Login successful - navigation will be handled by auth state change');
+      // Login successful - navigation will be handled by auth state change in _layout.tsx
+    } catch (error: any) {
+      console.error('Unexpected error during login:', error);
+      Alert.alert('Error', error.message || 'Failed to login. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendConfirmation = async () => {
+    console.log('User tapped Resend Confirmation Email');
+    
     if (!email.trim()) {
       Alert.alert('Email Required', 'Please enter your email address');
       return;
@@ -85,26 +93,30 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
+      console.log('Resending confirmation email to:', email);
       
       const { error } = await resendConfirmationEmail(email);
       
       if (error) {
+        console.error('Resend confirmation failed:', error.message);
         Alert.alert('Error', error.message || 'Failed to resend confirmation email');
       } else {
+        console.log('Confirmation email resent successfully');
         Alert.alert(
           'Email Sent',
           `A new confirmation email has been sent to ${email}. Please check your inbox and click the verification link.`
         );
       }
-    } catch (error) {
-      console.error('Error resending confirmation:', error);
-      Alert.alert('Error', 'Failed to resend confirmation email. Please try again.');
+    } catch (error: any) {
+      console.error('Unexpected error resending confirmation:', error);
+      Alert.alert('Error', error.message || 'Failed to resend confirmation email. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleSignUp = () => {
+    console.log('User tapped Sign Up link');
     router.push('/profile-setup');
   };
 

@@ -41,7 +41,7 @@ export default function ProfileSetupScreen() {
   };
 
   const handleContinue = async () => {
-    console.log('User tapped Continue button on profile setup');
+    console.log('User tapped Create Account button');
     
     if (!username.trim()) {
       Alert.alert('Required Field', 'Please enter a username');
@@ -74,14 +74,14 @@ export default function ProfileSetupScreen() {
       });
 
       if (signUpError) {
-        console.error('Supabase signup error:', signUpError);
+        console.error('Supabase signup error:', signUpError.message);
         Alert.alert('Signup Error', signUpError.message || 'Failed to create account. Please try again.');
         return;
       }
 
       // Step 2: Check if email confirmation is required
       if (needsEmailConfirmation) {
-        console.log('Email confirmation required');
+        console.log('Email confirmation required - user must verify email before continuing');
         
         Alert.alert(
           'Verify Your Email',
@@ -90,7 +90,7 @@ export default function ProfileSetupScreen() {
             {
               text: 'OK',
               onPress: () => {
-                // Navigate back to login screen
+                console.log('Navigating back to login screen');
                 router.replace('/login');
               }
             }
@@ -105,7 +105,7 @@ export default function ProfileSetupScreen() {
       try {
         const profile: UserProfile = {
           username: username.trim(),
-          email: email.trim(),
+          email: email.trim().toLowerCase(),
           phoneNumber: phoneNumber.trim(),
           handicap: handicap ? parseFloat(handicap) : undefined,
           displayName: username.trim(),
@@ -114,25 +114,25 @@ export default function ProfileSetupScreen() {
           contactsSynced: false,
         };
 
-        console.log('Saving profile to database:', profile);
+        console.log('Saving profile to Supabase database');
         await StorageService.saveProfile(profile);
-        console.log('Profile saved to Supabase successfully');
+        console.log('Profile saved successfully');
         
         // Step 4: Mark onboarding as complete
         await StorageService.setOnboardingComplete();
         console.log('Onboarding marked complete');
         
         // Step 5: Navigate to contact sync screen
+        console.log('Navigating to contact sync screen');
         router.replace('/contact-sync');
       } catch (profileError: any) {
         console.error('Error saving profile to database:', profileError);
         
-        let errorMessage = 'Database error saving new user';
-        if (profileError.message) {
-          errorMessage = `Database error: ${profileError.message}`;
-        }
+        const errorMessage = profileError.message 
+          ? `Failed to save profile: ${profileError.message}` 
+          : 'Failed to save profile. Please try again.';
         
-        Alert.alert('Signup Error', errorMessage);
+        Alert.alert('Profile Error', errorMessage);
       }
     } catch (error: any) {
       console.error('Unexpected error during profile setup:', error);
@@ -146,6 +146,13 @@ export default function ProfileSetupScreen() {
     console.log('User tapped Back to Login');
     router.back();
   };
+
+  const usernameValue = username;
+  const emailValue = email;
+  const passwordValue = password;
+  const phoneValue = phoneNumber;
+  const handicapValue = handicap;
+  const isLoading = loading;
 
   return (
     <LinearGradient
@@ -174,13 +181,13 @@ export default function ProfileSetupScreen() {
                 <Text style={styles.label}>Username *</Text>
                 <TextInput
                   style={styles.input}
-                  value={username}
+                  value={usernameValue}
                   onChangeText={setUsername}
                   placeholder="Enter your username"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -188,14 +195,14 @@ export default function ProfileSetupScreen() {
                 <Text style={styles.label}>Email *</Text>
                 <TextInput
                   style={styles.input}
-                  value={email}
+                  value={emailValue}
                   onChangeText={setEmail}
                   placeholder="your.email@example.com"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -203,14 +210,14 @@ export default function ProfileSetupScreen() {
                 <Text style={styles.label}>Password *</Text>
                 <TextInput
                   style={styles.input}
-                  value={password}
+                  value={passwordValue}
                   onChangeText={setPassword}
                   placeholder="At least 6 characters"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -218,12 +225,12 @@ export default function ProfileSetupScreen() {
                 <Text style={styles.label}>Phone Number *</Text>
                 <TextInput
                   style={styles.input}
-                  value={phoneNumber}
+                  value={phoneValue}
                   onChangeText={setPhoneNumber}
                   placeholder="+1 (555) 123-4567"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="phone-pad"
-                  editable={!loading}
+                  editable={!isLoading}
                 />
                 <Text style={styles.helperText}>
                   Used to connect with friends who are already on FAIRWAY
@@ -234,23 +241,23 @@ export default function ProfileSetupScreen() {
                 <Text style={styles.label}>Handicap (Optional)</Text>
                 <TextInput
                   style={styles.input}
-                  value={handicap}
+                  value={handicapValue}
                   onChangeText={setHandicap}
                   placeholder="e.g., 12.5"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="decimal-pad"
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
             </View>
 
             <TouchableOpacity
               onPress={handleContinue}
-              style={[styles.continueButton, loading && styles.buttonDisabled]}
+              style={[styles.continueButton, isLoading && styles.buttonDisabled]}
               activeOpacity={0.8}
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
                 <Text style={styles.continueButtonText}>Create Account</Text>
@@ -259,7 +266,7 @@ export default function ProfileSetupScreen() {
 
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Already have an account? </Text>
-              <TouchableOpacity onPress={handleBackToLogin} disabled={loading}>
+              <TouchableOpacity onPress={handleBackToLogin} disabled={isLoading}>
                 <Text style={styles.loginLink}>Sign In</Text>
               </TouchableOpacity>
             </View>

@@ -2,7 +2,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase, onAuthStateChange } from '@/utils/supabase';
 import { Session, User } from '@supabase/supabase-js';
-import { Alert } from 'react-native';
 
 interface SupabaseAuthContextType {
   user: User | null;
@@ -37,6 +36,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     // Listen for auth changes
     const { data: { subscription } } = onAuthStateChange((event, session) => {
       console.log('Auth event:', event);
+      console.log('Auth state changed:', event);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -48,9 +48,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Signing in user:', email);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
+    console.log('Attempting sign in for:', email);
+    
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
       password,
     });
     
@@ -73,18 +74,22 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
           } 
         };
       }
-    } else {
-      console.log('Sign in successful');
+      
+      return { error };
     }
     
-    return { error };
+    console.log('Sign in successful for user:', data.user?.email);
+    return { error: null };
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    console.log('Signing up user:', email);
+    console.log('Attempting sign up for:', email);
+    
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
     
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         data: metadata,
@@ -96,10 +101,10 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       console.error('Sign up error:', error.message);
       
       // Provide helpful error messages
-      if (error.message.includes('already registered')) {
+      if (error.message.includes('already registered') || error.message.includes('User already registered')) {
         return { 
           error: { 
-            message: 'This email is already registered. Please sign in instead or use a different email.' 
+            message: 'This email is already registered. Please sign in instead or use the "Forgot Password" option if you need to reset your password.' 
           },
           needsEmailConfirmation: false
         };
@@ -108,7 +113,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
       if (error.message.includes('password')) {
         return { 
           error: { 
-            message: 'Password is too weak. Please use at least 6 characters with a mix of letters and numbers.' 
+            message: 'Password must be at least 6 characters long.' 
           },
           needsEmailConfirmation: false
         };
@@ -118,6 +123,8 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     }
     
     // Check if email confirmation is required
+    // If data.session exists, user is auto-logged in (email confirmation disabled)
+    // If data.session is null but data.user exists, email confirmation is required
     const needsEmailConfirmation = data.user && !data.session;
     
     if (needsEmailConfirmation) {
@@ -126,11 +133,17 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         error: null, 
         needsEmailConfirmation: true 
       };
-    } else {
-      console.log('Sign up successful - user logged in automatically');
+    } else if (data.session) {
+      console.log('Sign up successful - user logged in automatically (email confirmation disabled)');
       return { 
         error: null, 
         needsEmailConfirmation: false 
+      };
+    } else {
+      console.warn('Unexpected signup response - no session and no user');
+      return {
+        error: { message: 'Unexpected signup response. Please try again.' },
+        needsEmailConfirmation: false
       };
     }
   };
@@ -140,7 +153,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     
     const { error } = await supabase.auth.resend({
       type: 'signup',
-      email: email,
+      email: email.trim().toLowerCase(),
     });
     
     if (error) {
@@ -150,6 +163,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         return {
           error: {
             message: 'Please wait a moment before requesting another confirmation email.'
+          }
+        };
+      }
+      
+      if (error.message.includes('already confirmed')) {
+        return {
+          error: {
+            message: 'Your email is already confirmed. Please try signing in.'
           }
         };
       }
