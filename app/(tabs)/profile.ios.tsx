@@ -21,7 +21,6 @@ import {
   Image,
 } from 'react-native';
 import { CourseRating } from '@/types/rating';
-import { StatCard } from '@/components/StatCard';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
@@ -128,6 +127,11 @@ export default function ProfileScreen() {
   const handleCoursesPlayed = () => {
     console.log('User tapped Courses Played');
     router.push('/user-courses');
+  };
+
+  const handleWantToPlay = () => {
+    console.log('User tapped Want to Play button');
+    Alert.alert('Coming Soon', 'Want to Play feature is coming soon!');
   };
 
   const handleFollowers = () => {
@@ -322,22 +326,62 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>Statistics</Text>
-          <View style={styles.statsGrid}>
-            <StatCard
-              title="Total Rounds"
-              value={totalRounds.toString()}
-              icon="golf-course"
-              color={colors.primary}
-            />
-            <StatCard
-              title="Avg Rating"
-              value={averageScore.toString()}
-              icon="star"
-              color={getScoreColor(averageScore)}
-            />
-          </View>
+        <View style={styles.actionButtonsContainer}>
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: themeColors.card }]}
+            onPress={handleCoursesPlayed}
+          >
+            <View style={styles.actionButtonContent}>
+              <View style={[styles.actionIconContainer, { backgroundColor: colors.primary + '20' }]}>
+                <IconSymbol
+                  ios_icon_name="figure.golf"
+                  android_material_icon_name="sports-golf"
+                  size={24}
+                  color={colors.primary}
+                />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={[styles.actionButtonTitle, { color: themeColors.text }]}>Courses</Text>
+                <Text style={[styles.actionButtonSubtitle, { color: themeColors.text }]}>
+                  View your played courses
+                </Text>
+              </View>
+              <IconSymbol
+                ios_icon_name="chevron.right"
+                android_material_icon_name="chevron-right"
+                size={20}
+                color={themeColors.text}
+              />
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.actionButton, { backgroundColor: themeColors.card }]}
+            onPress={handleWantToPlay}
+          >
+            <View style={styles.actionButtonContent}>
+              <View style={[styles.actionIconContainer, { backgroundColor: colors.warning + '20' }]}>
+                <IconSymbol
+                  ios_icon_name="bookmark.fill"
+                  android_material_icon_name="bookmark"
+                  size={24}
+                  color={colors.warning}
+                />
+              </View>
+              <View style={styles.actionTextContainer}>
+                <Text style={[styles.actionButtonTitle, { color: themeColors.text }]}>Want to Play</Text>
+                <Text style={[styles.actionButtonSubtitle, { color: themeColors.text }]}>
+                  Courses on your wishlist
+                </Text>
+              </View>
+              <IconSymbol
+                ios_icon_name="chevron.right"
+                android_material_icon_name="chevron-right"
+                size={20}
+                color={themeColors.text}
+              />
+            </View>
+          </TouchableOpacity>
         </View>
 
         {topCourses.length > 0 && (
@@ -556,6 +600,41 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.6,
   },
+  actionButtonsContainer: {
+    marginTop: 24,
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  actionButton: {
+    borderRadius: 16,
+    padding: 16,
+    boxShadow: '0px 2px 8px rgba(0, 0, 0, 0.1)',
+    elevation: 2,
+  },
+  actionButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  actionTextContainer: {
+    flex: 1,
+  },
+  actionButtonTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  actionButtonSubtitle: {
+    fontSize: 14,
+    opacity: 0.6,
+  },
   section: {
     marginTop: 24,
     paddingHorizontal: 20,
@@ -564,10 +643,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 12,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    gap: 12,
   },
   courseItem: {
     flexDirection: 'row',
