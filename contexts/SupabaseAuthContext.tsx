@@ -23,20 +23,23 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('Initializing Supabase auth session');
+    console.log('🔐 Initializing Supabase auth session');
     
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      console.log('Initial session loaded:', session ? 'User logged in' : 'No active session');
+      if (session) {
+        console.log('✅ Initial session loaded - User logged in:', session.user.email);
+      } else {
+        console.log('ℹ️ No active session found');
+      }
     });
 
     // Listen for auth changes
     const { data: { subscription } } = onAuthStateChange((event, session) => {
-      console.log('Auth event:', event);
-      console.log('Auth state changed:', event);
+      console.log('🔄 Auth event:', event);
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
@@ -48,21 +51,25 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const signIn = async (email: string, password: string) => {
-    console.log('Attempting sign in for:', email);
+    console.log('🔑 Attempting sign in for:', email);
+    
+    const normalizedEmail = email.trim().toLowerCase();
     
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
       password,
     });
     
     if (error) {
-      console.error('Sign in error:', error.message);
+      console.error('❌ Sign in error:', error.message);
       
       // Provide helpful error messages
       if (error.message.includes('Email not confirmed')) {
         return { 
           error: { 
-            message: 'Please verify your email address before signing in. Check your inbox for the confirmation link.' 
+            message: 'Please verify your email address before signing in. Check your inbox for the confirmation link.',
+            needsConfirmation: true,
+            email: normalizedEmail
           } 
         };
       }
@@ -75,30 +82,41 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         };
       }
       
-      return { error };
+      return { error: { message: error.message } };
     }
     
-    console.log('Sign in successful for user:', data.user?.email);
+    console.log('✅ Sign in successful for user:', data.user?.email);
     return { error: null };
   };
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    console.log('Attempting sign up for:', email);
+    console.log('📝 Attempting sign up for:', email);
     
     // Normalize email
     const normalizedEmail = email.trim().toLowerCase();
+    
+    // Validate password length
+    if (password.length < 6) {
+      console.error('❌ Password too short');
+      return {
+        error: {
+          message: 'Password must be at least 6 characters long.'
+        },
+        needsEmailConfirmation: false
+      };
+    }
     
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
       options: {
-        data: metadata,
+        data: metadata || {},
         emailRedirectTo: undefined, // Don't redirect on email confirmation
       },
     });
     
     if (error) {
-      console.error('Sign up error:', error.message);
+      console.error('❌ Sign up error:', error.message);
       
       // Provide helpful error messages
       if (error.message.includes('already registered') || error.message.includes('User already registered')) {
@@ -119,7 +137,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
         };
       }
       
-      return { error, needsEmailConfirmation: false };
+      return { error: { message: error.message }, needsEmailConfirmation: false };
     }
     
     // Check if email confirmation is required
@@ -128,41 +146,43 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     const needsEmailConfirmation = data.user && !data.session;
     
     if (needsEmailConfirmation) {
-      console.log('Sign up successful - email confirmation required');
+      console.log('📧 Sign up successful - email confirmation required');
       return { 
         error: null, 
         needsEmailConfirmation: true 
       };
     } else if (data.session) {
-      console.log('Sign up successful - user logged in automatically (email confirmation disabled)');
+      console.log('✅ Sign up successful - user logged in automatically (email confirmation disabled)');
       return { 
         error: null, 
         needsEmailConfirmation: false 
       };
     } else {
-      console.warn('Unexpected signup response - no session and no user');
+      console.warn('⚠️ Unexpected signup response - no session and no user');
       return {
-        error: { message: 'Unexpected signup response. Please try again.' },
+        error: { message: 'Unexpected signup response. Please try again or contact support.' },
         needsEmailConfirmation: false
       };
     }
   };
 
   const resendConfirmationEmail = async (email: string) => {
-    console.log('Resending confirmation email to:', email);
+    console.log('📧 Resending confirmation email to:', email);
+    
+    const normalizedEmail = email.trim().toLowerCase();
     
     const { error } = await supabase.auth.resend({
       type: 'signup',
-      email: email.trim().toLowerCase(),
+      email: normalizedEmail,
     });
     
     if (error) {
-      console.error('Resend confirmation error:', error.message);
+      console.error('❌ Resend confirmation error:', error.message);
       
-      if (error.message.includes('rate limit')) {
+      if (error.message.includes('rate limit') || error.message.includes('too many')) {
         return {
           error: {
-            message: 'Please wait a moment before requesting another confirmation email.'
+            message: 'Please wait a moment before requesting another confirmation email. Check your spam folder if you haven\'t received it.'
           }
         };
       }
@@ -174,25 +194,26 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
           }
         };
       }
-    } else {
-      console.log('Confirmation email resent successfully');
+      
+      return { error: { message: error.message } };
     }
     
-    return { error };
+    console.log('✅ Confirmation email resent successfully');
+    return { error: null };
   };
 
   const signOutUser = async () => {
-    console.log('Signing out user');
+    console.log('🚪 Signing out user');
     const { error } = await supabase.auth.signOut();
     if (error) {
-      console.error('Sign out error:', error.message);
+      console.error('❌ Sign out error:', error.message);
       throw error;
     }
-    console.log('Sign out successful');
+    console.log('✅ Sign out successful');
   };
 
   const signInWithGoogle = async () => {
-    console.log('Initiating Google sign in');
+    console.log('🔑 Initiating Google sign in');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -201,14 +222,14 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     });
     
     if (error) {
-      console.error('Google sign in error:', error.message);
+      console.error('❌ Google sign in error:', error.message);
     }
     
     return { error };
   };
 
   const signInWithApple = async () => {
-    console.log('Initiating Apple sign in');
+    console.log('🔑 Initiating Apple sign in');
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'apple',
       options: {
@@ -217,7 +238,7 @@ export function SupabaseAuthProvider({ children }: { children: React.ReactNode }
     });
     
     if (error) {
-      console.error('Apple sign in error:', error.message);
+      console.error('❌ Apple sign in error:', error.message);
     }
     
     return { error };

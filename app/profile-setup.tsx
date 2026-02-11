@@ -29,6 +29,7 @@ export default function ProfileSetupScreen() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [handicap, setHandicap] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showEmailConfirmModal, setShowEmailConfirmModal] = useState(false);
   const [confirmationEmail, setConfirmationEmail] = useState('');
 
@@ -44,48 +45,55 @@ export default function ProfileSetupScreen() {
 
   const handleContinue = async () => {
     console.log('User tapped Create Account button');
+    setErrorMessage('');
     
-    if (!username.trim()) {
-      console.log('Validation failed: username required');
+    const usernameValue = username.trim();
+    const emailValue = email.trim();
+    const passwordValue = password.trim();
+    const phoneValue = phoneNumber.trim();
+    
+    if (!usernameValue) {
+      setErrorMessage('Please enter a username');
       return;
     }
 
-    if (!email.trim() || !validateEmail(email)) {
-      console.log('Validation failed: invalid email');
+    if (!emailValue || !validateEmail(emailValue)) {
+      setErrorMessage('Please enter a valid email address');
       return;
     }
 
-    if (!password.trim() || password.length < 6) {
-      console.log('Validation failed: password too short');
+    if (!passwordValue || passwordValue.length < 6) {
+      setErrorMessage('Password must be at least 6 characters long');
       return;
     }
 
-    if (!phoneNumber.trim() || !validatePhoneNumber(phoneNumber)) {
-      console.log('Validation failed: invalid phone number');
+    if (!phoneValue || !validatePhoneNumber(phoneValue)) {
+      setErrorMessage('Please enter a valid phone number (at least 10 digits)');
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Creating Supabase account for:', email);
+      console.log('Creating Supabase account for:', emailValue);
 
       // Step 1: Create Supabase auth account
-      const { error: signUpError, needsEmailConfirmation } = await signUp(email, password, {
-        username: username.trim(),
-        phone_number: phoneNumber.trim(),
-        display_name: username.trim(),
+      const { error: signUpError, needsEmailConfirmation } = await signUp(emailValue, passwordValue, {
+        username: usernameValue,
+        phone_number: phoneValue,
+        display_name: usernameValue,
         handicap: handicap ? parseFloat(handicap) : null,
       });
 
       if (signUpError) {
         console.error('Supabase signup error:', signUpError.message);
+        setErrorMessage(signUpError.message || 'Failed to create account. Please try again.');
         return;
       }
 
       // Step 2: Check if email confirmation is required
       if (needsEmailConfirmation) {
         console.log('Email confirmation required - showing modal');
-        setConfirmationEmail(email);
+        setConfirmationEmail(emailValue);
         setShowEmailConfirmModal(true);
         return;
       }
@@ -95,11 +103,11 @@ export default function ProfileSetupScreen() {
       // Step 3: Save profile to database (only if no email confirmation needed)
       try {
         const profile: UserProfile = {
-          username: username.trim(),
-          email: email.trim().toLowerCase(),
-          phoneNumber: phoneNumber.trim(),
+          username: usernameValue,
+          email: emailValue.toLowerCase(),
+          phoneNumber: phoneValue,
           handicap: handicap ? parseFloat(handicap) : undefined,
-          displayName: username.trim(),
+          displayName: usernameValue,
           totalRounds: 0,
           totalCourses: 0,
           contactsSynced: false,
@@ -127,6 +135,7 @@ export default function ProfileSetupScreen() {
       }
     } catch (error: any) {
       console.error('Unexpected error during profile setup:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -149,6 +158,7 @@ export default function ProfileSetupScreen() {
   const phoneValue = phoneNumber;
   const handicapValue = handicap;
   const isLoading = loading;
+  const errorText = errorMessage;
   const confirmEmailValue = confirmationEmail;
 
   return (
@@ -172,6 +182,12 @@ export default function ProfileSetupScreen() {
                 Sign up to track your golf journey and connect with friends
               </Text>
             </View>
+
+            {errorText ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorText}</Text>
+              </View>
+            ) : null}
 
             <View style={styles.form}>
               <View style={styles.inputContainer}>
@@ -283,18 +299,22 @@ export default function ProfileSetupScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Verify Your Email</Text>
+            <Text style={styles.modalTitle}>✅ Account Created!</Text>
             <Text style={styles.modalMessage}>
-              We&apos;ve sent a confirmation email to {confirmEmailValue}. Please check your inbox and click the verification link to complete your registration.
+              We&apos;ve sent a confirmation email to:
             </Text>
+            <Text style={styles.modalEmail}>{confirmEmailValue}</Text>
             <Text style={styles.modalMessage}>
-              After verifying, return to the app and sign in.
+              Please check your inbox and click the verification link to complete your registration.
+            </Text>
+            <Text style={styles.modalNote}>
+              💡 Don&apos;t forget to check your spam folder if you don&apos;t see the email within a few minutes.
             </Text>
             <TouchableOpacity
               style={styles.modalButton}
               onPress={handleEmailConfirmModalClose}
             >
-              <Text style={styles.modalButtonText}>OK</Text>
+              <Text style={styles.modalButtonText}>OK, Got It!</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -333,6 +353,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.9,
     lineHeight: 22,
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   form: {
     flex: 1,
@@ -422,18 +456,34 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
   },
   modalMessage: {
     fontSize: 16,
     color: colors.text,
     lineHeight: 24,
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalEmail: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: colors.primary,
     marginBottom: 16,
     textAlign: 'center',
+  },
+  modalNote: {
+    fontSize: 14,
+    color: colors.text,
+    opacity: 0.7,
+    lineHeight: 20,
+    marginBottom: 24,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   modalButton: {
     backgroundColor: colors.primary,
@@ -441,7 +491,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 8,
   },
   modalButtonText: {
     color: '#FFFFFF',

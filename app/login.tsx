@@ -33,30 +33,38 @@ export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [showResendModal, setShowResendModal] = useState(false);
   const [resendEmail, setResendEmail] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   const handleLogin = async () => {
     console.log('User tapped Sign In button');
+    setErrorMessage('');
     
-    if (!email.trim() || !password.trim()) {
-      setShowResendModal(false);
+    const emailValue = email.trim();
+    const passwordValue = password.trim();
+    
+    if (!emailValue || !passwordValue) {
+      setErrorMessage('Please enter both email and password');
       return;
     }
 
     try {
       setLoading(true);
-      console.log('Attempting login for:', email);
+      console.log('Attempting login for:', emailValue);
 
-      const { error } = await signIn(email, password);
+      const { error } = await signIn(emailValue, passwordValue);
 
       if (error) {
         console.error('Login failed:', error.message);
         
         // Check if it's an email confirmation issue
-        if (error.message && error.message.includes('verify your email')) {
-          setResendEmail(email);
+        if (error.needsConfirmation) {
+          setResendEmail(error.email || emailValue);
           setShowResendModal(true);
+        } else {
+          setErrorMessage(error.message || 'Login failed. Please try again.');
         }
         return;
       }
@@ -65,6 +73,7 @@ export default function LoginScreen() {
       // Login successful - navigation will be handled by auth state change in _layout.tsx
     } catch (error: any) {
       console.error('Unexpected error during login:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -72,10 +81,12 @@ export default function LoginScreen() {
 
   const handleResendConfirmation = async () => {
     console.log('User tapped Resend Confirmation Email');
+    setResendSuccess(false);
     
-    const emailToUse = resendEmail || email;
+    const emailToUse = resendEmail || email.trim();
     
-    if (!emailToUse.trim()) {
+    if (!emailToUse) {
+      setErrorMessage('Please enter your email address');
       return;
     }
 
@@ -87,12 +98,14 @@ export default function LoginScreen() {
       
       if (error) {
         console.error('Resend confirmation failed:', error.message);
+        setErrorMessage(error.message || 'Failed to resend confirmation email');
       } else {
         console.log('Confirmation email resent successfully');
-        setShowResendModal(false);
+        setResendSuccess(true);
       }
     } catch (error: any) {
       console.error('Unexpected error resending confirmation:', error);
+      setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -103,9 +116,18 @@ export default function LoginScreen() {
     router.push('/profile-setup');
   };
 
-  const emailValue = email;
-  const passwordValue = password;
+  const handleCloseResendModal = () => {
+    setShowResendModal(false);
+    setResendSuccess(false);
+    setErrorMessage('');
+  };
+
+  const emailInputValue = email;
+  const passwordInputValue = password;
   const isLoading = loading;
+  const errorText = errorMessage;
+  const resendEmailValue = resendEmail;
+  const showSuccess = resendSuccess;
 
   return (
     <LinearGradient
@@ -134,12 +156,18 @@ export default function LoginScreen() {
               </Text>
             </View>
 
+            {errorText ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{errorText}</Text>
+              </View>
+            ) : null}
+
             <View style={styles.form}>
               <View style={styles.inputContainer}>
                 <Text style={styles.label}>Email</Text>
                 <TextInput
                   style={styles.input}
-                  value={emailValue}
+                  value={emailInputValue}
                   onChangeText={setEmail}
                   placeholder="your.email@example.com"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
@@ -154,7 +182,7 @@ export default function LoginScreen() {
                 <Text style={styles.label}>Password</Text>
                 <TextInput
                   style={styles.input}
-                  value={passwordValue}
+                  value={passwordInputValue}
                   onChangeText={setPassword}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
@@ -193,34 +221,57 @@ export default function LoginScreen() {
         visible={showResendModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowResendModal(false)}
+        onRequestClose={handleCloseResendModal}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Email Not Verified</Text>
-            <Text style={styles.modalMessage}>
-              Please verify your email address before signing in. Check your inbox for the confirmation link.
-            </Text>
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonPrimary]}
-                onPress={handleResendConfirmation}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <ActivityIndicator color="#FFFFFF" size="small" />
-                ) : (
-                  <Text style={styles.modalButtonTextPrimary}>Resend Email</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonSecondary]}
-                onPress={() => setShowResendModal(false)}
-                disabled={isLoading}
-              >
-                <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
+            
+            {showSuccess ? (
+              <React.Fragment>
+                <Text style={styles.modalMessage}>
+                  ✅ Confirmation email sent successfully!
+                </Text>
+                <Text style={styles.modalMessage}>
+                  Please check your inbox at {resendEmailValue} and click the verification link. Don&apos;t forget to check your spam folder.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.modalButton, styles.modalButtonPrimary]}
+                  onPress={handleCloseResendModal}
+                >
+                  <Text style={styles.modalButtonTextPrimary}>OK</Text>
+                </TouchableOpacity>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <Text style={styles.modalMessage}>
+                  Please verify your email address before signing in. Check your inbox for the confirmation link.
+                </Text>
+                <Text style={styles.modalMessage}>
+                  If you haven&apos;t received the email, you can request a new one below.
+                </Text>
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonPrimary]}
+                    onPress={handleResendConfirmation}
+                    disabled={isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.modalButtonTextPrimary}>Resend Email</Text>
+                    )}
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.modalButtonSecondary]}
+                    onPress={handleCloseResendModal}
+                    disabled={isLoading}
+                  >
+                    <Text style={styles.modalButtonTextSecondary}>Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            )}
           </View>
         </View>
       </Modal>
@@ -266,6 +317,20 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     opacity: 0.9,
     lineHeight: 22,
+    textAlign: 'center',
+  },
+  errorContainer: {
+    backgroundColor: 'rgba(255, 59, 48, 0.15)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 59, 48, 0.3)',
+  },
+  errorText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
   },
   form: {
@@ -350,7 +415,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.text,
     lineHeight: 24,
-    marginBottom: 24,
+    marginBottom: 16,
     textAlign: 'center',
   },
   modalButtons: {
