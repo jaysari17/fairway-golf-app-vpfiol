@@ -18,7 +18,6 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/styles/commonStyles';
-import { StorageService } from '@/utils/storage';
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext';
 
 // Helper to resolve image sources (handles both local require() and remote URLs)
@@ -36,8 +35,6 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    console.log('User tapped Login button');
-    
     if (!email.trim() || !password.trim()) {
       Alert.alert('Required Fields', 'Please enter both email and password');
       return;
@@ -45,13 +42,10 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      console.log('Attempting login for:', email);
 
       const { error } = await signIn(email, password);
 
       if (error) {
-        console.error('Login error:', error);
-        
         // Check if it's an email confirmation issue
         if (error.message && error.message.includes('verify your email')) {
           Alert.alert(
@@ -74,13 +68,7 @@ export default function LoginScreen() {
         return;
       }
 
-      console.log('Login successful');
-      
-      // Mark onboarding as complete
-      await StorageService.setOnboardingComplete();
-      
-      // Navigate to main app
-      router.replace('/(tabs)');
+      // Login successful - navigation will be handled by auth state change
     } catch (error) {
       console.error('Error during login:', error);
       Alert.alert('Error', 'Failed to login. Please try again.');
@@ -97,7 +85,6 @@ export default function LoginScreen() {
 
     try {
       setLoading(true);
-      console.log('Resending confirmation email to:', email);
       
       const { error } = await resendConfirmationEmail(email);
       
@@ -118,9 +105,12 @@ export default function LoginScreen() {
   };
 
   const handleSignUp = () => {
-    console.log('User tapped Sign Up button');
     router.push('/profile-setup');
   };
+
+  const emailValue = email;
+  const passwordValue = password;
+  const isLoading = loading;
 
   return (
     <LinearGradient
@@ -154,14 +144,14 @@ export default function LoginScreen() {
                 <Text style={styles.label}>Email</Text>
                 <TextInput
                   style={styles.input}
-                  value={email}
+                  value={emailValue}
                   onChangeText={setEmail}
                   placeholder="your.email@example.com"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   keyboardType="email-address"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -169,21 +159,21 @@ export default function LoginScreen() {
                 <Text style={styles.label}>Password</Text>
                 <TextInput
                   style={styles.input}
-                  value={password}
+                  value={passwordValue}
                   onChangeText={setPassword}
                   placeholder="Enter your password"
                   placeholderTextColor="rgba(255, 255, 255, 0.5)"
                   secureTextEntry
                   autoCapitalize="none"
                   autoCorrect={false}
-                  editable={!loading}
+                  editable={!isLoading}
                 />
               </View>
 
               <TouchableOpacity
                 onPress={handleResendConfirmation}
                 style={styles.forgotPasswordButton}
-                disabled={loading}
+                disabled={isLoading}
               >
                 <Text style={styles.forgotPasswordText}>
                   Didn&apos;t receive confirmation email?
@@ -193,11 +183,11 @@ export default function LoginScreen() {
 
             <TouchableOpacity
               onPress={handleLogin}
-              style={[styles.loginButton, loading && styles.buttonDisabled]}
+              style={[styles.loginButton, isLoading && styles.buttonDisabled]}
               activeOpacity={0.8}
-              disabled={loading}
+              disabled={isLoading}
             >
-              {loading ? (
+              {isLoading ? (
                 <ActivityIndicator color={colors.primary} />
               ) : (
                 <Text style={styles.loginButtonText}>Sign In</Text>
@@ -206,7 +196,7 @@ export default function LoginScreen() {
 
             <View style={styles.signupContainer}>
               <Text style={styles.signupText}>Don&apos;t have an account? </Text>
-              <TouchableOpacity onPress={handleSignUp} disabled={loading}>
+              <TouchableOpacity onPress={handleSignUp} disabled={isLoading}>
                 <Text style={styles.signupLink}>Sign Up</Text>
               </TouchableOpacity>
             </View>

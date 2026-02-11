@@ -62,12 +62,13 @@ export default function RatingFlowScreen() {
       setComparisonCourses(comparisons);
       
       const ranked = ratings
-        .sort((a, b) => b.finalScore - a.finalScore)
+        .filter(r => r.finalScore !== undefined)
+        .sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0))
         .map(r => ({
           courseId: r.courseId,
           courseName: r.courseName,
           courseLocation: r.courseLocation,
-          rating: r.finalScore,
+          rating: r.finalScore || 0,
         }));
       setRankedCourses(ranked);
     } catch (error) {
@@ -119,7 +120,6 @@ export default function RatingFlowScreen() {
   }, [currentStep, comparisonCourses.length, loadCurrentComparisonCourse]);
 
   const handlePlayAgainSelect = (response: 'definitely' | 'maybe' | 'no') => {
-    console.log('User selected play again response:', response);
     setPlayAgainResponse(response);
     
     if (comparisonCourses.length > 0) {
@@ -130,7 +130,6 @@ export default function RatingFlowScreen() {
   };
 
   const handleComparisonSelect = async (selectedCourseId: string) => {
-    console.log('User compared courses, selected:', selectedCourseId);
     if (selectedCourseId === courseId) {
       setComparisonWins(prev => prev + 1);
     } else {
@@ -147,7 +146,6 @@ export default function RatingFlowScreen() {
   };
 
   const handleRankPlacement = async (position: number) => {
-    console.log('User placed course at position:', position);
     setRankPosition(position);
     
     const neighborRatings: { above?: number; below?: number } = {};
@@ -174,8 +172,6 @@ export default function RatingFlowScreen() {
 
   const handleComplete = async () => {
     try {
-      console.log('User completed rating for:', courseName);
-      
       // Save the rating
       const rating: CourseRating = {
         courseId,
@@ -193,12 +189,12 @@ export default function RatingFlowScreen() {
       
       await RatingStorageService.saveRating(rating);
       
-      // Save a round for this course
+      // Save a round for this course with ISO date string
       const round: Omit<Round, 'id'> = {
         courseId,
         courseName,
         courseLocation,
-        datePlayed: new Date(),
+        datePlayed: new Date(), // Will be converted to ISO string in storage
         score: undefined,
         teeBox: undefined,
         yardage: undefined,
@@ -215,9 +211,12 @@ export default function RatingFlowScreen() {
       
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
+      const finalScoreDisplay = finalScore.toFixed(1);
+      const successMessage = `${courseName} has been added to your Fairway list with a rating of ${finalScoreDisplay}/10 and shared with your friends!`;
+      
       Alert.alert(
         'Success! 🎉',
-        `${courseName} has been added to your Fairway list with a rating of ${finalScore.toFixed(1)}/10 and shared with your friends!`,
+        successMessage,
         [
           {
             text: 'OK',
@@ -233,28 +232,29 @@ export default function RatingFlowScreen() {
 
   const postToSocialFeed = async (rating: CourseRating) => {
     try {
-      console.log('Posting rating to social feed');
       const currentUserId = await SocialStorageService.getCurrentUserId();
       const profile = await StorageService.getProfile();
       
+      const eventId = `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const ratingValue = Math.round((rating.finalScore || 0) * 10);
+      
       const feedEvent: FeedEvent = {
-        id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: eventId,
         userId: currentUserId,
         username: profile?.username || 'You',
         displayName: profile?.displayName || profile?.username || 'You',
-        userAvatar: profile?.avatar,
+        avatarUrl: profile?.avatarUrl,
         type: 'course_rated',
         timestamp: new Date(),
         courseId: rating.courseId,
         courseName: rating.courseName,
         courseLocation: rating.courseLocation,
-        rating: Math.round(rating.finalScore * 10),
+        rating: ratingValue,
         likes: [],
         comments: [],
       };
       
       await SocialStorageService.saveFeedEvent(feedEvent);
-      console.log('Successfully posted to social feed');
     } catch (error) {
       console.error('Error posting to social feed:', error);
     }
@@ -265,7 +265,10 @@ export default function RatingFlowScreen() {
       const ratings = await RatingStorageService.getRatings();
       const rounds = await StorageService.getRounds();
       
-      if (ratings.length >= 3 && rounds.length >= 5) {
+      const hasEnoughRatings = ratings.length >= 3;
+      const hasEnoughRounds = rounds.length >= 5;
+      
+      if (hasEnoughRatings && hasEnoughRounds) {
         await AppStoreReviewService.requestReview();
       }
     } catch (error) {
@@ -332,13 +335,18 @@ export default function RatingFlowScreen() {
         );
       
       case 'confirmation':
+        const finalScoreValue = finalScore;
+        const rankPositionValue = rankPosition;
+        const totalCoursesValue = rankedCourses.length + 1;
+        const playCountValue = playCount;
+        
         return (
           <ConfirmationStep
             courseName={courseName}
-            finalScore={finalScore}
-            rankPosition={rankPosition}
-            totalCourses={rankedCourses.length + 1}
-            playCount={playCount}
+            finalScore={finalScoreValue}
+            rankPosition={rankPositionValue}
+            totalCourses={totalCoursesValue}
+            playCount={playCountValue}
             onComplete={handleComplete}
           />
         );

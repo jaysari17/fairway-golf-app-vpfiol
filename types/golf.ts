@@ -23,7 +23,7 @@ export interface Round {
   courseId: string;
   courseName: string;
   courseLocation: string;
-  datePlayed: Date; // Changed from 'date' to match database column 'date_played'
+  datePlayed: Date; // Use Date object in app, converted to ISO string for API
   rating?: number; // 1-100 (optional since not all rounds have ratings)
   review?: string;
   score?: number;
@@ -39,7 +39,7 @@ export interface UserProfile {
   email?: string; // Email is stored in auth.users, not profiles
   displayName?: string; // display_name in database
   phoneNumber?: string; // phone_number in database
-  avatarUrl?: string; // avatar_url in database
+  avatarUrl?: string; // avatar_url in database (consistent naming)
   bio?: string;
   handicap?: number;
   totalRounds?: number; // Calculated field, not in database

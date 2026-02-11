@@ -1,55 +1,21 @@
 
-export interface Friend {
-  id: string;
-  username: string;
-  displayName: string;
-  avatar?: string;
-  handicap?: number;
-  totalRounds: number;
-  totalCourses: number;
-  status: 'pending' | 'accepted' | 'blocked';
-  requestedBy?: string; // user ID who sent the request
-  requestedAt: Date;
-  acceptedAt?: Date;
-}
-
-export interface FriendRequest {
-  id: string;
-  fromUserId: string;
-  fromUsername: string;
-  fromDisplayName: string;
-  fromAvatar?: string;
-  toUserId: string;
-  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
-  createdAt: Date;
-  respondedAt?: Date;
-}
-
-export type FeedEventType = 
-  | 'round_logged'
-  | 'course_rated'
-  | 'list_updated'
-  | 'personal_best'
-  | 'mutual_course'
-  | 'live_round'
-  | 'photo_posted';
-
 export interface FeedEvent {
   id: string;
   userId: string;
   username: string;
   displayName: string;
-  userAvatar?: string;
-  type: FeedEventType;
+  avatarUrl?: string; // Consistent naming with UserProfile
+  type: 'course_rated' | 'round_logged' | 'badge_earned' | 'friend_added';
   timestamp: Date;
   courseId?: string;
   courseName?: string;
   courseLocation?: string;
+  roundId?: string;
   rating?: number;
   score?: number;
-  photo?: string;
+  photoUrl?: string;
   comment?: string;
-  likes: string[]; // array of user IDs who liked
+  likes: string[]; // Array of user IDs who liked
   comments: FeedComment[];
 }
 
@@ -58,65 +24,28 @@ export interface FeedComment {
   userId: string;
   username: string;
   displayName: string;
-  userAvatar?: string;
-  text: string;
+  avatarUrl?: string; // Consistent naming
+  comment: string;
   timestamp: Date;
 }
 
-export interface Notification {
+export interface FriendRequest {
   id: string;
-  type: 'friend_request' | 'friend_accepted' | 'activity' | 'reaction';
   fromUserId: string;
   fromUsername: string;
   fromDisplayName: string;
-  fromAvatar?: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  relatedId?: string; // friend request ID, event ID, etc.
+  fromAvatarUrl?: string; // Consistent naming
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  createdAt: Date;
 }
 
-export interface PrivacySettings {
-  accountVisibility: 'public' | 'friends' | 'private';
-  showHandicap: boolean;
-  showCourseMap: boolean;
-  showRankingList: boolean;
-  showRecentActivity: boolean;
-  mutedFriends: string[]; // array of user IDs
-}
-
-export interface UserSocialProfile {
+export interface Friend {
   userId: string;
   username: string;
   displayName: string;
-  avatar?: string;
-  bio?: string;
-  handicap?: number;
+  avatarUrl?: string; // Consistent naming
   totalRounds: number;
   totalCourses: number;
-  topCourses: {
-    courseId: string;
-    courseName: string;
-    courseLocation: string;
-    rating: number;
-    rank: number;
-  }[];
-  recentRatings: {
-    courseId: string;
-    courseName: string;
-    courseLocation: string;
-    rating: number;
-    date: Date;
-  }[];
-  privacySettings: PrivacySettings;
-}
-
-export interface MutualCourse {
-  courseId: string;
-  courseName: string;
-  courseLocation: string;
-  yourRating: number;
-  friendRating: number;
-  yourRounds: number;
-  friendRounds: number;
+  mutualFriends: number;
 }

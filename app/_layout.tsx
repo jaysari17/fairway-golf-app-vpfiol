@@ -36,7 +36,6 @@ function RootNavigator() {
     async function checkOnboarding() {
       try {
         const complete = await StorageService.isOnboardingComplete();
-        console.log('Onboarding complete:', complete);
         setIsOnboardingComplete(complete);
       } catch (error) {
         console.error('Error checking onboarding:', error);
@@ -50,21 +49,16 @@ function RootNavigator() {
     if (loaded && !authLoading && isOnboardingComplete !== null) {
       SplashScreen.hideAsync();
       
-      console.log('Auth state - User:', user ? 'logged in' : 'not logged in', 'Onboarding:', isOnboardingComplete);
-      
       // If onboarding not complete, show onboarding
       if (!isOnboardingComplete) {
-        console.log('Navigating to onboarding');
         router.replace('/onboarding');
       }
       // If onboarding complete but no user, show login
       else if (!user) {
-        console.log('Navigating to login');
         router.replace('/login');
       }
       // If user is logged in, show main app
       else {
-        console.log('User authenticated, showing main app');
         router.replace('/(tabs)');
       }
     }
@@ -123,6 +117,13 @@ function RootNavigator() {
               presentation: "modal",
               title: "Rate Course",
               headerShown: false,
+            }}
+          />
+          <Stack.Screen
+            name="find-friends"
+            options={{
+              presentation: "modal",
+              title: "Find Friends",
             }}
           />
           <Stack.Screen

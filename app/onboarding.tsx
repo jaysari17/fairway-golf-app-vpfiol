@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '@/styles/commonStyles';
+import { StorageService } from '@/utils/storage';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -44,7 +45,6 @@ export default function OnboardingScreen() {
   const animatedValue = useSharedValue(0);
 
   const handleNext = () => {
-    console.log('User tapped Next on onboarding screen');
     if (currentIndex < onboardingData.length - 1) {
       setCurrentIndex(currentIndex + 1);
       animatedValue.value = withSpring(currentIndex + 1);
@@ -54,13 +54,20 @@ export default function OnboardingScreen() {
   };
 
   const handleSkip = () => {
-    console.log('User tapped Skip on onboarding screen');
     handleGetStarted();
   };
 
-  const handleGetStarted = () => {
-    console.log('Navigating to login screen');
-    router.replace('/login');
+  const handleGetStarted = async () => {
+    try {
+      // Mark onboarding as complete BEFORE navigating
+      await StorageService.setOnboardingComplete();
+      console.log('Onboarding completed, navigating to login');
+      router.replace('/login');
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      // Navigate anyway to avoid getting stuck
+      router.replace('/login');
+    }
   };
 
   const contentStyle = useAnimatedStyle(() => {
@@ -78,6 +85,8 @@ export default function OnboardingScreen() {
   });
 
   const currentData = onboardingData[currentIndex];
+  const isLastSlide = currentIndex === onboardingData.length - 1;
+  const buttonText = isLastSlide ? 'Get Started' : 'Next';
 
   return (
     <LinearGradient
@@ -86,7 +95,7 @@ export default function OnboardingScreen() {
     >
       <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
         <View style={styles.header}>
-          {currentIndex < onboardingData.length - 1 && (
+          {!isLastSlide && (
             <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
               <Text style={styles.skipText}>Skip</Text>
             </TouchableOpacity>
@@ -101,15 +110,18 @@ export default function OnboardingScreen() {
 
         <View style={styles.footer}>
           <View style={styles.pagination}>
-            {onboardingData.map((_, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.dot,
-                  index === currentIndex && styles.activeDot,
-                ]}
-              />
-            ))}
+            {onboardingData.map((_, index) => {
+              const isActive = index === currentIndex;
+              return (
+                <View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    isActive && styles.activeDot,
+                  ]}
+                />
+              );
+            })}
           </View>
 
           <TouchableOpacity
@@ -117,9 +129,7 @@ export default function OnboardingScreen() {
             style={styles.nextButton}
             activeOpacity={0.8}
           >
-            <Text style={styles.nextButtonText}>
-              {currentIndex === onboardingData.length - 1 ? 'Get Started' : 'Next'}
-            </Text>
+            <Text style={styles.nextButtonText}>{buttonText}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
